@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "jobId": "sample-10s",
+  "title": "เส้นทางรถไฟความเร็วสูง กรุงเทพฯ – นครราชสีมา (10s Pilot)",
+  "revision": 1,
+  "styleId": "pilot-map-route",
+  "aspect": "9:16",
+  "fps": 30,
+  "seed": 4201,
+  "audio": {
+    "mode": "audio-in",
+    "sourcePath": "assets/fixtures/sample-10s/voice_fixture.wav",
+    "cuesPath": "assets/fixtures/sample-10s/cues.json",
+    "targetLufs": -16.0,
+    "maxTruePeakDbtp": -1.0
+  }
+}

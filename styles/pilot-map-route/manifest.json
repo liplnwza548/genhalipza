@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "pilot-map-route",
+  "version": "0.1.0",
+  "archetype": "geo-route",
+  "supportedAspects": ["9:16"],
+  "capabilities": ["vector-map", "route", "thai-phrase-captions"],
+  "limits": {
+    "maxLabels": 5,
+    "maxCaptionLines": 2
+  },
+  "render": {
+    "fps": 30,
+    "seedRequired": true
+  },
+  "tokens": {
+    "fontFamily": "Prompt",
+    "palette": "night-map"
+  },
+  "recipes": ["overview-route", "zoom-destination"],
+  "acceptanceJobs": ["sample-10s"]
+}

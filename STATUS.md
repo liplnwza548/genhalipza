@@ -4,25 +4,35 @@
 
 ## สถานะปัจจุบัน
 
-**Phase 0A Completed & Verified on Linux Cloud VM — Ready for Phase 0B (10s Vertical Slice)**
+**Phase 0B Automated Pipeline & QC Passed — Ready for Owner Visual/Audio Review (`accepted-by-owner` pending)**
 
-1. ปรับ [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md) เป็น **Revised v2** ตามผลรีวิวใน [`docs/CHATGPT_REVIEW_2026-11-15.md`](docs/CHATGPT_REVIEW_2026-11-15.md) แล้ว
-2. วางโครงสร้างพื้นฐาน, Asset Policy (`schemas/ASSET_POLICY.md`), และ JSON Schemas ทั้ง 5 ตัว (`job`, `timeline`, `pipeline_state`, `approvals`, `style.manifest`) ครบถ้วน พร้อมตรวจ compile ผ่าน Ajv
-3. ดาวน์โหลดฟอนต์ไทยลิขสิทธิ์ OFL (`Prompt-Regular.ttf`, `Prompt-Bold.ttf`, `NotoSansThai.ttf`) เข้า `assets/fonts/` พร้อมไฟล์ใบอนุญาต (เนื่องจาก VM ไม่มีฟอนต์ไทยติดตั้งใน OS)
-4. รัน `npm run doctor` ผ่าน **7/7 checks** และรัน `npm run smoke` ผ่านจริงบน Debian 12 Cloud VM:
-   - Headless Chromium (`/usr/bin/chromium`) โหลดฟอนต์ไทยผ่าน Data URI (`promptLoaded: true`, `notoLoaded: true`) และเรนเดอร์เฟรม `1080×1920` ใน `~1.0s`
-   - ตรวจภาพ `smoke_frame.png` แล้ว สระบน/สระล่าง/วรรณยุกต์ไทยคมชัดไม่ขาด
-   - FFmpeg mux + 2-pass loudnorm ออก `smoke_test.mp4` (`H.264 / AAC 48kHz / 30fps / 60 frames`, `measuredLufs: -16.05`, `measuredTruePeakDbtp: -12.24`, `decodeErrors: ""`)
+### ผลพิสูจน์ Phase 0B (`npm run pilot:10s`) บน Linux Cloud VM
+- **Job:** `assets/fixtures/sample-10s/job.json` (`1080×1920`, `9:16`, `30fps`, `300 frames`, `10.0s`)
+- **Single Source of Truth:** Gate 3, Gate 4 และ Gate 5 ใช้ `timeline.json` และ Chromium Canvas Renderer ตัวเดียวกัน
+- **เวลาที่วัดได้จริง (Warm single-tab browser reuse):**
+  - Gate 3 (`gate3_sketch.png`, 2 scenes): **478 ms**
+  - Gate 4 (`gate4_storyboard.png` + Full-Size PNGs, 2 keyframes): **379 ms**
+  - Gate 5 (`final.mp4`, 300 frames): **30.25 s** (~9.9 fps)
+- **Automated QC (`qc_report.json`):** `passed: true`
+  - Video: `h264`, `1080×1920`, `30/1 fps`, `300 frames`, `videoDurationSec: 10`, `decodeErrors: ""`
+  - Audio (วัดจาก `final.mp4` หลัง AAC encode): `aac`, `48000 Hz`, **`-15.96 LUFS`**, **`True Peak -10.1 dBTP`**
+  - Thai Phrase Captions: 4 cues (non-overlapping, min cue ≥ 0.6s, no broken tone marks)
+  - Gate 4 vs Final MP4 Frame Parity (SSIM): `scene-1` frame 45 = **`0.983981`**, `scene-2` frame 195 = **`0.982178`** (`>= 0.95`)
 
-## คำสั่งตรวจสอบที่รันได้ทันทีหลัง Clean Checkout
+## คำสั่งรันซ้ำจาก Clean Checkout
 
 ```bash
 npm install
 npm run validate:schemas
 npm run doctor
 npm run smoke
+npm run pilot:10s
 ```
 
-## Next action (Phase 0B)
+## Next action (Phase 1)
 
-สร้าง **10-Second Vertical Slice (`9:16`, `30fps`, `300 frames`)** สไตล์แผนที่เวกเตอร์ 1–2 ซีน ด้วย **Audio-In + Cues ที่ตรวจแล้ว + Phrase Captions ภาษาไทย** ให้ผ่านครบ Gate 1 → Gate 5 พร้อม Automated QC และการตรวจรับภาพ/เสียงจริงจาก Philip
+1. ให้ Philip ตรวจรับภาพ/เสียงจริงของ `jobs/sample-10s/final.mp4`
+2. เริ่ม **Phase 1**:
+   - สร้างระบบ **Dependency Invalidation, Atomic Resume & Scene Patch** (แก้ซีนเดียวไม่ต้องเรนเดอร์ใหม่ทั้งหมด)
+   - สร้าง **Thai Text Engine** (ตัดคำไทย + Safe Area + Bounding-box collision lint)
+   - เพิ่ม **Gate 4 Motion Probe (2–3s)** และ **TTS Adapter** (Edge-TTS ไทย Multi-speaker พร้อม Audio-In fallback)

@@ -1,0 +1,36 @@
+{
+  "totalDurationSec": 10.0,
+  "scenes": [
+    {
+      "sceneId": "scene-1",
+      "recipe": "overview-route",
+      "startSec": 0.0,
+      "endSec": 5.0,
+      "headline": "เส้นทางสายอีสาน 253 กม.",
+      "subheadline": "กรุงเทพฯ มุ่งหน้า นครราชสีมา",
+      "params": {
+        "fromLabel": "กรุงเทพฯ",
+        "toLabel": "นครราชสีมา",
+        "distanceBadge": "253 กม."
+      }
+    },
+    {
+      "sceneId": "scene-2",
+      "recipe": "zoom-destination",
+      "startSec": 5.0,
+      "endSec": 10.0,
+      "headline": "ประตูสู่ภาคตะวันออกเฉียงเหนือ",
+      "subheadline": "เชื่อมเศรษฐกิจไทยสู่อีสาน",
+      "params": {
+        "focusLabel": "นครราชสีมา",
+        "highlightMetric": "250 กม./ชม."
+      }
+    }
+  ],
+  "captions": [
+    { "text": "เจาะเส้นทางรถไฟความเร็วสูงสายแรก", "startSec": 0.3, "endSec": 2.4 },
+    { "text": "จากกรุงเทพฯ สู่ประตูอีสาน 253 กิโลเมตร", "startSec": 2.6, "endSec": 4.8 },
+    { "text": "ย่นเวลาเดินทางมุ่งหน้าสู่นครราชสีมา", "startSec": 5.2, "endSec": 7.5 },
+    { "text": "เชื่อมเศรษฐกิจภูมิภาคด้วยความเร็วสูง", "startSec": 7.7, "endSec": 9.7 }
+  ]
+}
