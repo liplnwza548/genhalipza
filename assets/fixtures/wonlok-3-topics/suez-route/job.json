@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "jobId": "wonlok-suez-route",
+  "title": "เส้นทางเดินเรือคลองสุเอซ vs แหลมกู๊ดโฮป (Wonlok-Plus 30s)",
+  "revision": 1,
+  "styleId": "wonlok-plus",
+  "aspect": "9:16",
+  "fps": 30,
+  "seed": 5002,
+  "audio": {
+    "mode": "audio-in",
+    "sourcePath": "jobs/wonlok-suez-route/voice_fixture.wav",
+    "cuesPath": "assets/fixtures/wonlok-3-topics/suez-route/cues.json",
+    "targetLufs": -16.0,
+    "maxTruePeakDbtp": -1.0
+  }
+}

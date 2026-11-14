@@ -1,0 +1,75 @@
+{
+  "totalDurationSec": 30.0,
+  "scenes": [
+    {
+      "sceneId": "scene-1",
+      "recipe": "locate",
+      "startSec": 0.0,
+      "endSec": 10.0,
+      "headline": "สมรภูมิเดินเรือเอเชียตะวันออกเฉียงใต้",
+      "subheadline": "จับตาช่องแคบมะละกาและคาบสมุทรมลายู",
+      "params": {
+        "camFrom": { "lon": 101.0, "lat": 6.0, "zoom": 4.5 },
+        "camTo": { "lon": 101.5, "lat": 4.5, "zoom": 7.5 },
+        "highlightCountries": ["THA", "MYS", "SGP"],
+        "markers": [{ "lon": 103.82, "lat": 1.35, "label": "ช่องแคบมะละกา" }]
+      }
+    },
+    {
+      "sceneId": "scene-2",
+      "recipe": "trace-route",
+      "startSec": 10.0,
+      "endSec": 20.0,
+      "headline": "เชื่อม 2 มหาสมุทร ระนอง – ชุมพร",
+      "subheadline": "อันดามันสู่อ่าวไทย ระยะทาง ~90 กม.",
+      "params": {
+        "camFrom": { "lon": 101.5, "lat": 4.5, "zoom": 7.5 },
+        "camTo": { "lon": 99.1, "lat": 10.2, "zoom": 14.0 },
+        "highlightCountries": ["THA"],
+        "routes": [
+          {
+            "from": [98.6085, 9.9658],
+            "to": [99.1800, 10.4930],
+            "fromLabel": "ระนอง",
+            "toLabel": "ชุมพร",
+            "badge": "Landbridge ~90 กม."
+          }
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-3",
+      "recipe": "compare",
+      "startSec": 20.0,
+      "endSec": 30.0,
+      "headline": "ทางเลือกใหม่ลดคอขวดเดินเรือ",
+      "subheadline": "เทียบเส้นทางลัด vs อ้อมช่องแคบมะละกา",
+      "params": {
+        "camFrom": { "lon": 100.5, "lat": 6.5, "zoom": 6.5 },
+        "camTo": { "lon": 101.0, "lat": 5.5, "zoom": 7.0 },
+        "highlightCountries": ["THA", "SGP"],
+        "compareCards": [
+          { "title": "อ้อมช่องแคบมะละกา", "value": "+1,200 กม.", "color": "#ff3b6b" },
+          { "title": "ข้าม Landbridge", "value": "เร็วขึ้น ~3 วัน", "color": "#00e5ff" }
+        ]
+      }
+    }
+  ],
+  "captions": [
+    {
+      "text": "ช่องแคบมะละกาคือเส้นทางเดินเรือที่หนาแน่นที่สุด",
+      "startSec": 0.5,
+      "endSec": 5.0,
+      "words": [
+        { "text": "ช่องแคบมะละกา", "startSec": 0.5, "endSec": 1.9 },
+        { "text": "คือเส้นทางเดินเรือ", "startSec": 1.9, "endSec": 3.4 },
+        { "text": "ที่หนาแน่นที่สุด", "startSec": 3.4, "endSec": 5.0 }
+      ]
+    },
+    { "text": "เรือขนส่งนับแสนลำต้องผ่านจุดนี้ทุกปี", "startSec": 5.2, "endSec": 9.6 },
+    { "text": "ไทยจึงผลักดันโครงการ Landbridge ระนอง-ชุมพร", "startSec": 10.4, "endSec": 15.0 },
+    { "text": "เชื่อมฝั่งอันดามันสู่อ่าวไทยโดยตรง", "startSec": 15.3, "endSec": 19.6 },
+    { "text": "ช่วยย่นระยะทางอ้อมแหลมมลายูกว่าพันกิโลเมตร", "startSec": 20.4, "endSec": 25.0 },
+    { "text": "ปั้นไทยเป็นฮับโลจิสติกส์ใหม่ของภูมิภาค", "startSec": 25.3, "endSec": 29.5 }
+  ]
+}

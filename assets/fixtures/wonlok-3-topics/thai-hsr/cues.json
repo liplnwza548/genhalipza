@@ -1,0 +1,77 @@
+{
+  "totalDurationSec": 30.0,
+  "scenes": [
+    {
+      "sceneId": "scene-1",
+      "recipe": "locate",
+      "startSec": 0.0,
+      "endSec": 10.0,
+      "headline": "เจาะเส้นทางสายอีสาน 253 กม.",
+      "subheadline": "ปักหมุดจุดยุทธศาสตร์ประเทศไทย",
+      "params": {
+        "camFrom": { "lon": 101.0, "lat": 15.0, "zoom": 5.5 },
+        "camTo": { "lon": 101.3, "lat": 14.3, "zoom": 10.0 },
+        "highlightCountries": ["THA"],
+        "markers": [{ "lon": 100.5018, "lat": 13.7563, "label": "กรุงเทพฯ" }]
+      }
+    },
+    {
+      "sceneId": "scene-2",
+      "recipe": "trace-route",
+      "startSec": 10.0,
+      "endSec": 20.0,
+      "headline": "เชื่อมกลางสู่อีสาน 250 กม./ชม.",
+      "subheadline": "กรุงเทพฯ มุ่งหน้า นครราชสีมา",
+      "params": {
+        "camFrom": { "lon": 101.3, "lat": 14.3, "zoom": 10.0 },
+        "camTo": { "lon": 101.4, "lat": 14.4, "zoom": 16.0 },
+        "highlightCountries": ["THA"],
+        "routes": [
+          {
+            "from": [100.5018, 13.7563],
+            "to": [102.0978, 14.9799],
+            "fromLabel": "กรุงเทพฯ",
+            "toLabel": "นครราชสีมา",
+            "badge": "253 กม."
+          }
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-3",
+      "recipe": "compare",
+      "startSec": 20.0,
+      "endSec": 30.0,
+      "headline": "ย่นเวลาเดินทางกว่าครึ่ง",
+      "subheadline": "เทียบรถไฟความเร็วสูง vs รถยนต์",
+      "params": {
+        "camFrom": { "lon": 101.4, "lat": 14.4, "zoom": 16.0 },
+        "camTo": { "lon": 102.09, "lat": 14.98, "zoom": 14.0 },
+        "highlightCountries": ["THA"],
+        "markers": [{ "lon": 102.0978, "lat": 14.9799, "label": "นครราชสีมา" }],
+        "compareCards": [
+          { "title": "รถยนต์ / รถไฟเดิม", "value": "~4 ชม.", "color": "#94a3b8" },
+          { "title": "ความเร็วสูง", "value": "1.5 ชม.", "color": "#00e5ff" }
+        ]
+      }
+    }
+  ],
+  "captions": [
+    {
+      "text": "เส้นทางรถไฟความเร็วสูงสายแรกของไทย",
+      "startSec": 0.5,
+      "endSec": 5.0,
+      "words": [
+        { "text": "เส้นทาง", "startSec": 0.5, "endSec": 1.4 },
+        { "text": "รถไฟ", "startSec": 1.4, "endSec": 2.3 },
+        { "text": "ความเร็วสูง", "startSec": 2.3, "endSec": 3.6 },
+        { "text": "สายแรกของไทย", "startSec": 3.6, "endSec": 5.0 }
+      ]
+    },
+    { "text": "เริ่มต้นจากสถานีกลางกรุงเทพอภิวัฒน์", "startSec": 5.2, "endSec": 9.6 },
+    { "text": "วิ่งตรงสู่นครราชสีมา ระยะทาง 253 กิโลเมตร", "startSec": 10.4, "endSec": 15.0 },
+    { "text": "ด้วยความเร็วสูงสุด 250 กิโลเมตรต่อชั่วโมง", "startSec": 15.3, "endSec": 19.6 },
+    { "text": "ลดเวลาเดินทางจาก 4 ชั่วโมงเหลือเพียงชั่วโมงครึ่ง", "startSec": 20.4, "endSec": 25.0 },
+    { "text": "เปิดประตูเศรษฐกิจสู่ภาคตะวันออกเฉียงเหนือ", "startSec": 25.3, "endSec": 29.5 }
+  ]
+}

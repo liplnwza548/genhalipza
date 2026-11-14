@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "wonlok-plus",
+  "version": "0.1.0",
+  "archetype": "geo-route",
+  "supportedAspects": ["9:16"],
+  "capabilities": [
+    "geojson-world-map",
+    "country-highlight-mask",
+    "neon-geo-route",
+    "thai-word-highlight-captions",
+    "persistent-brand-badge"
+  ],
+  "limits": {
+    "maxLabels": 6,
+    "maxCaptionLines": 2
+  },
+  "render": {
+    "fps": 30,
+    "seedRequired": true
+  },
+  "tokens": {
+    "fontFamily": "Prompt",
+    "palette": "wonlok-night"
+  },
+  "recipes": ["locate", "trace-route", "compare"],
+  "acceptanceJobs": ["wonlok-thai-hsr", "wonlok-suez-route", "wonlok-kra-canal"]
+}

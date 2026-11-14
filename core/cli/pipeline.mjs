@@ -57,7 +57,7 @@ function generateFixtureAudio(outWavPath, durationSec = 10.0) {
     '-f', 'lavfi',
     '-i', `sine=frequency=495:duration=${durationSec}:sample_rate=48000`,
     '-filter_complex',
-    '[0:a][1:a]amix=inputs=2:weights=0.7 0.3,volume=-18dB,afade=t=in:st=0:d=0.15,afade=t=out:st=9.7:d=0.3',
+    `[0:a][1:a]amix=inputs=2:weights=0.7 0.3,volume=-18dB,afade=t=in:st=0:d=0.15,afade=t=out:st=${Math.max(0, durationSec - 0.3).toFixed(2)}:d=0.3`,
     '-c:a', 'pcm_s16le',
     outWavPath,
   ], { stdio: 'ignore' });
@@ -217,6 +217,12 @@ try {
     const page = await browser.newPage({ viewport: { width: timeline.width, height: timeline.height } });
     await page.setContent(html, { waitUntil: 'load' });
 
+    const geojsonPath = path.join(ROOT, 'assets', 'maps', 'ne_110m_countries.geojson');
+    if (fs.existsSync(geojsonPath)) {
+      const geojson = JSON.parse(fs.readFileSync(geojsonPath, 'utf8'));
+      await page.evaluate((g) => window.setGeoJsonData(g), geojson);
+    }
+
     // Gate 3: Layout Sketch
     const tG3 = Date.now();
     const sketchPngs = [];
@@ -234,17 +240,17 @@ try {
     execFileSync('ffmpeg', [
       '-y',
       ...sketchPngs.flatMap((p) => ['-i', p]),
-      '-filter_complex', `hstack=inputs=${sketchPngs.length},scale=1080:-1`,
+      '-filter_complex', `hstack=inputs=${sketchPngs.length},scale=1440:-1`,
       sketchSheet,
     ], { stdio: 'ignore' });
     console.log(`✅ Gate 3 (Layout Sketch): ${sketchPngs.length} scenes in ${Date.now() - tG3}ms`);
 
-    // Gate 4: Visual Storyboard + Motion Probe (2s transition window)
+    // Gate 4: Visual Storyboard (1 dynamic keyframe per scene)
     const tG4 = Date.now();
-    const keyframeIndices = [
-      { sceneId: 'scene-1', frameIndex: 45 },
-      { sceneId: 'scene-2', frameIndex: 195 },
-    ];
+    const keyframeIndices = timeline.scenes.map((sc) => ({
+      sceneId: sc.sceneId,
+      frameIndex: Math.floor(sc.startFrame + (sc.endFrame - sc.startFrame) * 0.45),
+    }));
     for (const kf of keyframeIndices) {
       await page.evaluate(
         ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'final'),
@@ -258,7 +264,7 @@ try {
     execFileSync('ffmpeg', [
       '-y',
       ...gate4Keyframes.flatMap((k) => ['-i', k.pngPath]),
-      '-filter_complex', `hstack=inputs=${gate4Keyframes.length},scale=1080:-1`,
+      '-filter_complex', `hstack=inputs=${gate4Keyframes.length},scale=1440:-1`,
       storyboardSheet,
     ], { stdio: 'ignore' });
     console.log(`✅ Gate 4 (Visual Storyboard): ${gate4Keyframes.length} keyframes + sheet in ${Date.now() - tG4}ms`);
@@ -336,11 +342,13 @@ try {
     throw new Error(`FFmpeg mux failed: ${muxRes.stderr}`);
   }
 
-  // Contact sheet
+  // Contact sheet (10 frames across full duration in 5x2 grid)
+  const durationSec = totalFrames / job.fps;
+  const sampleFps = (10 / Math.max(1, durationSec)).toFixed(4);
   const contactSheet = path.join(jobDir, 'contact_sheet.jpg');
   execFileSync('ffmpeg', [
     '-y', '-i', finalMp4,
-    '-vf', 'fps=1,scale=360:-1,tile=5x2',
+    '-vf', `fps=${sampleFps},scale=360:-1,tile=5x2`,
     '-frames:v', '1',
     contactSheet,
   ], { stdio: 'ignore' });

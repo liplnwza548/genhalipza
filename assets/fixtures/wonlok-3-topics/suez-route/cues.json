@@ -1,0 +1,76 @@
+{
+  "totalDurationSec": 30.0,
+  "scenes": [
+    {
+      "sceneId": "scene-1",
+      "recipe": "locate",
+      "startSec": 0.0,
+      "endSec": 10.0,
+      "headline": "คอขวดการค้าโลก คลองสุเอซ",
+      "subheadline": "จุดเชื่อมทะเลแดง – เมดิเตอร์เรเนียน",
+      "params": {
+        "camFrom": { "lon": 25.0, "lat": 26.0, "zoom": 2.5 },
+        "camTo": { "lon": 31.0, "lat": 28.5, "zoom": 6.5 },
+        "highlightCountries": ["EGY"],
+        "markers": [{ "lon": 32.55, "lat": 29.97, "label": "คลองสุเอซ" }]
+      }
+    },
+    {
+      "sceneId": "scene-2",
+      "recipe": "trace-route",
+      "startSec": 10.0,
+      "endSec": 20.0,
+      "headline": "เส้นทางลัดสู่มหาสมุทรยุโรป",
+      "subheadline": "พอร์ตซาอิด มุ่งหน้า รอตเทอร์ดัม",
+      "params": {
+        "camFrom": { "lon": 31.0, "lat": 28.5, "zoom": 6.5 },
+        "camTo": { "lon": 18.0, "lat": 41.0, "zoom": 4.2 },
+        "highlightCountries": ["EGY", "NLD"],
+        "routes": [
+          {
+            "from": [32.30, 31.26],
+            "to": [4.48, 51.92],
+            "fromLabel": "คลองสุเอซ",
+            "toLabel": "รอตเทอร์ดัม",
+            "badge": "ประหยัด ~10 วัน"
+          }
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-3",
+      "recipe": "compare",
+      "startSec": 20.0,
+      "endSec": 30.0,
+      "headline": "เทียบต้นทุนเวลาเดินเรือ",
+      "subheadline": "ผ่านคลองสุเอซ vs อ้อมแหลมกู๊ดโฮป",
+      "params": {
+        "camFrom": { "lon": 18.0, "lat": 20.0, "zoom": 2.2 },
+        "camTo": { "lon": 22.0, "lat": 8.0, "zoom": 2.4 },
+        "highlightCountries": ["EGY", "ZAF"],
+        "markers": [{ "lon": 18.47, "lat": -34.35, "label": "แหลมกู๊ดโฮป" }],
+        "compareCards": [
+          { "title": "อ้อมแหลมกู๊ดโฮป", "value": "~24+ วัน", "color": "#ff3b6b" },
+          { "title": "ผ่านคลองสุเอซ", "value": "~14 วัน", "color": "#00e5ff" }
+        ]
+      }
+    }
+  ],
+  "captions": [
+    {
+      "text": "คลองสุเอซคือเส้นเลือดใหญ่ของการค้าโลก",
+      "startSec": 0.5,
+      "endSec": 5.0,
+      "words": [
+        { "text": "คลองสุเอซ", "startSec": 0.5, "endSec": 1.6 },
+        { "text": "คือเส้นเลือดใหญ่", "startSec": 1.6, "endSec": 3.2 },
+        { "text": "ของการค้าโลก", "startSec": 3.2, "endSec": 5.0 }
+      ]
+    },
+    { "text": "เชื่อมเอเชียและยุโรปโดยไม่ต้องอ้อมแอฟริกา", "startSec": 5.2, "endSec": 9.6 },
+    { "text": "เรือสินค้าวิ่งจากทะเลแดงตรงสู่เมดิเตอร์เรเนียน", "startSec": 10.4, "endSec": 15.0 },
+    { "text": "มุ่งหน้าสู่ท่าเรือใหญ่รอตเทอร์ดัมในยุโรป", "startSec": 15.3, "endSec": 19.6 },
+    { "text": "ช่วยประหยัดเวลาเดินทางได้ราว 10 วันเต็ม", "startSec": 20.4, "endSec": 25.0 },
+    { "text": "ลดทั้งค่าน้ำมันและต้นทุนขนส่งมหาศาล", "startSec": 25.3, "endSec": 29.5 }
+  ]
+}
