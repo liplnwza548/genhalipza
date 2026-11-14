@@ -114,6 +114,24 @@ export function buildRendererHtml(rootDir) {
       ctx.closePath();
     }
 
+    const thWordSeg = new Intl.Segmenter('th', { granularity: 'word' });
+    function wrapThaiLines(ctx, text, maxWidth, maxLines = 2) {
+      const tokens = Array.from(thWordSeg.segment(String(text || '')), (s) => s.segment);
+      const lines = [];
+      let cur = '';
+      for (const tok of tokens) {
+        const cand = cur + tok;
+        if (cur === '' || ctx.measureText(cand).width <= maxWidth) {
+          cur = cand;
+        } else {
+          lines.push(cur.trimEnd());
+          cur = tok.trimStart();
+        }
+      }
+      if (cur.trim().length > 0) lines.push(cur.trimEnd());
+      return lines.slice(0, maxLines);
+    }
+
     window.renderTimelineFrame = async (timeline, frameIndex, mode = 'final') => {
       const fontStatus = await ensureFonts();
       const canvas = document.getElementById('stage');
@@ -313,13 +331,18 @@ export function buildRendererHtml(rootDir) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-      ctx.font = '700 62px "Prompt"';
-      ctx.fillText(headline, 540, 325);
+      ctx.font = '700 60px "Prompt"';
+      const headLines = wrapThaiLines(ctx, headline, 840, 2);
+      headLines.forEach((ln, idx) => {
+        ctx.fillText(ln, 540, 315 + idx * 66);
+      });
 
       if (subheadline) {
+        const subY = headLines.length > 1 ? 430 : 390;
         ctx.fillStyle = isSketch ? '#334155' : '#ffd166';
-        ctx.font = '600 42px "Noto Sans Thai"';
-        ctx.fillText(subheadline, 540, 395);
+        ctx.font = '600 40px "Noto Sans Thai"';
+        const subLines = wrapThaiLines(ctx, subheadline, 840, 1);
+        ctx.fillText(subLines[0] || '', 540, subY);
       }
 
       // Active Phrase Caption
@@ -338,10 +361,16 @@ export function buildRendererHtml(rootDir) {
         ctx.stroke();
 
         ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-        ctx.font = '700 44px "Noto Sans Thai"';
+        ctx.font = '700 42px "Noto Sans Thai"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(activeCap.text, 540, 1406);
+        const capLines = wrapThaiLines(ctx, activeCap.text, 820, 2);
+        if (capLines.length === 1) {
+          ctx.fillText(capLines[0], 540, 1406);
+        } else {
+          ctx.fillText(capLines[0], 540, 1382);
+          ctx.fillText(capLines[1], 540, 1432);
+        }
       }
 
       // 5. Sketch Metadata Header (Preview-only)

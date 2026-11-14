@@ -1,24 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { buildRendererHtml } from '../engine/html-template.mjs';
+import {
+  acquireJobLock,
+  computeSceneHashes,
+  invalidateStaleApprovals,
+  sha256File,
+  sha256Json,
+  writeJsonAtomic,
+} from '../engine/state-manager.mjs';
 import { runPostRenderQc } from '../qa/qc.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-
-function sha256File(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').slice(0, 16);
-}
-
-function sha256Json(obj) {
-  return crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex').slice(0, 16);
-}
 
 function findChromium() {
   const candidates = [
@@ -51,7 +50,6 @@ function formatSrtTime(sec) {
 }
 
 function generateFixtureAudio(outWavPath, durationSec = 10.0) {
-  // Deterministic 10s speech-cadence audio fixture (gentle dual-tone + amplitude envelope)
   execFileSync('ffmpeg', [
     '-y',
     '-f', 'lavfi',
@@ -77,11 +75,16 @@ function buildSrt(timeline) {
 }
 
 function parseArgs(argv) {
-  const args = { cmd: argv[2] || 'run', job: 'assets/fixtures/sample-10s/job.json' };
+  const args = {
+    cmd: argv[2] || 'run',
+    job: 'assets/fixtures/sample-10s/job.json',
+    cuesOverride: null,
+    skipProbe: false,
+  };
   for (let i = 3; i < argv.length; i++) {
-    if (argv[i] === '--job' && argv[i + 1]) {
-      args.job = argv[++i];
-    }
+    if (argv[i] === '--job' && argv[i + 1]) args.job = argv[++i];
+    if (argv[i] === '--cues' && argv[i + 1]) args.cuesOverride = argv[++i];
+    if (argv[i] === '--skip-probe') args.skipProbe = true;
   }
   return args;
 }
@@ -97,256 +100,302 @@ if (!validateJob(job)) {
 }
 
 const jobDir = path.join(ROOT, 'jobs', job.jobId);
-const g3Dir = path.join(jobDir, 'gate3_sketch');
-const g4Dir = path.join(jobDir, 'gate4_storyboard');
-const framesDir = path.join(jobDir, 'frames');
-fs.mkdirSync(g3Dir, { recursive: true });
-fs.mkdirSync(g4Dir, { recursive: true });
-fs.mkdirSync(framesDir, { recursive: true });
+const releaseLock = acquireJobLock(jobDir);
 
-console.log(`=== GenhaLipza Pipeline (Phase 0B) — Job: ${job.jobId} ===\n`);
+try {
+  const g3Dir = path.join(jobDir, 'gate3_sketch');
+  const g4Dir = path.join(jobDir, 'gate4_storyboard');
+  const framesDir = path.join(jobDir, 'frames');
+  fs.mkdirSync(g3Dir, { recursive: true });
+  fs.mkdirSync(g4Dir, { recursive: true });
+  fs.mkdirSync(framesDir, { recursive: true });
 
-// Gate 1: Brief & Facts
-const factsSrc = path.join(path.dirname(jobJsonPath), 'facts.md');
-const factsDst = path.join(jobDir, 'facts.md');
-if (fs.existsSync(factsSrc)) {
-  fs.copyFileSync(factsSrc, factsDst);
-}
-console.log('✅ Gate 1 (Brief & Facts): facts.md ready');
+  console.log(`=== GenhaLipza Pipeline — Job: ${job.jobId} (rev ${job.revision || 1}) ===\n`);
 
-// Gate 2: Audio-In + Cues -> Compile Timeline (Single Source of Truth)
-const cuesPath = path.resolve(ROOT, job.audio.cuesPath);
-const cues = JSON.parse(fs.readFileSync(cuesPath, 'utf8'));
+  // Gate 1: Brief & Facts
+  const factsSrc = path.join(path.dirname(jobJsonPath), 'facts.md');
+  const factsDst = path.join(jobDir, 'facts.md');
+  if (fs.existsSync(factsSrc)) {
+    fs.copyFileSync(factsSrc, factsDst);
+  }
+  console.log('✅ Gate 1 (Brief & Facts): facts.md ready');
 
-let audioPath = path.resolve(ROOT, job.audio.sourcePath);
-if (!fs.existsSync(audioPath)) {
-  audioPath = path.join(jobDir, 'voice_fixture.wav');
-  generateFixtureAudio(audioPath, cues.totalDurationSec || 10.0);
-  console.log(`ℹ️ Generated deterministic 10s fixture audio: ${path.relative(ROOT, audioPath)}`);
-}
+  // Gate 2: Audio-In + Cues -> Compile Timeline
+  const cuesPath = path.resolve(ROOT, args.cuesOverride || job.audio.cuesPath);
+  const cues = JSON.parse(fs.readFileSync(cuesPath, 'utf8'));
 
-const dimensions = job.aspect === '9:16' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
-const totalFrames = Math.round((cues.totalDurationSec || 10.0) * job.fps);
+  let audioPath = path.resolve(ROOT, job.audio.sourcePath);
+  if (!fs.existsSync(audioPath)) {
+    audioPath = path.join(jobDir, 'voice_fixture.wav');
+    if (!fs.existsSync(audioPath)) {
+      generateFixtureAudio(audioPath, cues.totalDurationSec || 10.0);
+      console.log(`ℹ️ Generated deterministic 10s fixture audio: ${path.relative(ROOT, audioPath)}`);
+    }
+  }
 
-const compiledScenes = cues.scenes.map((s) => {
-  const startFrame = Math.round(s.startSec * job.fps);
-  const endFrame = Math.round(s.endSec * job.fps);
-  const sceneCaptions = (cues.captions || []).filter(
-    (c) => c.endSec > s.startSec && c.startSec < s.endSec
-  );
-  return {
-    sceneId: s.sceneId,
-    recipe: s.recipe,
-    startFrame,
-    endFrame,
-    headline: s.headline,
-    captions: sceneCaptions,
-    params: {
-      ...(s.params || {}),
-      subheadline: s.subheadline || '',
+  const dimensions = job.aspect === '9:16' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+  const totalFrames = Math.round((cues.totalDurationSec || 10.0) * job.fps);
+
+  const compiledScenes = cues.scenes.map((s) => {
+    const startFrame = Math.round(s.startSec * job.fps);
+    const endFrame = Math.round(s.endSec * job.fps);
+    const sceneCaptions = (cues.captions || []).filter(
+      (c) => c.endSec > s.startSec && c.startSec < s.endSec
+    );
+    return {
+      sceneId: s.sceneId,
+      recipe: s.recipe,
+      startFrame,
+      endFrame,
+      headline: s.headline,
+      captions: sceneCaptions,
+      params: {
+        ...(s.params || {}),
+        subheadline: s.subheadline || '',
+      },
+    };
+  });
+
+  const inputHash = sha256Json({ job, cues, audioHash: sha256File(audioPath) });
+  const timeline = {
+    schemaVersion: 1,
+    jobId: job.jobId,
+    revision: job.revision || 1,
+    aspect: job.aspect,
+    width: dimensions.width,
+    height: dimensions.height,
+    fps: job.fps,
+    totalFrames,
+    seed: job.seed,
+    buildIdentity: {
+      engineVersion: '0.2.0-phase1',
+      styleId: job.styleId,
+      styleVersion: '0.1.0',
+      inputHash,
+      fontHashes: {
+        'Prompt-Regular.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Prompt-Regular.ttf')),
+        'Prompt-Bold.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Prompt-Bold.ttf')),
+        'NotoSansThai.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'NotoSansThai.ttf')),
+      },
+    },
+    scenes: compiledScenes,
+  };
+
+  const validateTimeline = loadValidator('timeline.schema.json');
+  if (!validateTimeline(timeline)) {
+    console.error('❌ Compiled timeline invalid:', validateTimeline.errors);
+    process.exit(1);
+  }
+  const timelinePath = path.join(jobDir, 'timeline.json');
+  writeJsonAtomic(timelinePath, timeline);
+  const srtPath = path.join(jobDir, 'subtitles.srt');
+  fs.writeFileSync(srtPath, buildSrt(timeline));
+
+  const approvalsPath = path.join(jobDir, 'approvals.json');
+  invalidateStaleApprovals(approvalsPath, inputHash);
+
+  const sceneHashes = computeSceneHashes(timeline);
+  const frameCachePath = path.join(jobDir, 'frame_cache.json');
+  const frameCache = fs.existsSync(frameCachePath) ? JSON.parse(fs.readFileSync(frameCachePath, 'utf8')) : {};
+
+  console.log(`✅ Gate 2 (Compile Timeline): ${totalFrames} frames @ ${job.fps}fps (inputHash=${inputHash})`);
+
+  // Launch Chromium once (warm reuse)
+  const chromiumPath = findChromium();
+  const html = buildRendererHtml(ROOT);
+  const browser = await chromium.launch({
+    executablePath: chromiumPath,
+    headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage'],
+  });
+
+  const gate4Keyframes = [];
+  let renderedCount = 0;
+  let cacheHits = 0;
+
+  try {
+    const page = await browser.newPage({ viewport: { width: timeline.width, height: timeline.height } });
+    await page.setContent(html, { waitUntil: 'load' });
+
+    // Gate 3: Layout Sketch
+    const tG3 = Date.now();
+    const sketchPngs = [];
+    for (const sc of timeline.scenes) {
+      const midFrame = Math.floor((sc.startFrame + sc.endFrame) / 2);
+      await page.evaluate(
+        ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'sketch'),
+        { tl: timeline, fi: midFrame }
+      );
+      const outPng = path.join(g3Dir, `sketch_${sc.sceneId}.png`);
+      await page.screenshot({ path: outPng, type: 'png' });
+      sketchPngs.push(outPng);
+    }
+    const sketchSheet = path.join(jobDir, 'gate3_sketch.png');
+    execFileSync('ffmpeg', [
+      '-y',
+      ...sketchPngs.flatMap((p) => ['-i', p]),
+      '-filter_complex', `hstack=inputs=${sketchPngs.length},scale=1080:-1`,
+      sketchSheet,
+    ], { stdio: 'ignore' });
+    console.log(`✅ Gate 3 (Layout Sketch): ${sketchPngs.length} scenes in ${Date.now() - tG3}ms`);
+
+    // Gate 4: Visual Storyboard + Motion Probe (2s transition window)
+    const tG4 = Date.now();
+    const keyframeIndices = [
+      { sceneId: 'scene-1', frameIndex: 45 },
+      { sceneId: 'scene-2', frameIndex: 195 },
+    ];
+    for (const kf of keyframeIndices) {
+      await page.evaluate(
+        ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'final'),
+        { tl: timeline, fi: kf.frameIndex }
+      );
+      const fullPng = path.join(g4Dir, `storyboard_${kf.sceneId}_f${kf.frameIndex}.png`);
+      await page.screenshot({ path: fullPng, type: 'png' });
+      gate4Keyframes.push({ ...kf, pngPath: fullPng });
+    }
+    const storyboardSheet = path.join(jobDir, 'gate4_storyboard.png');
+    execFileSync('ffmpeg', [
+      '-y',
+      ...gate4Keyframes.flatMap((k) => ['-i', k.pngPath]),
+      '-filter_complex', `hstack=inputs=${gate4Keyframes.length},scale=1080:-1`,
+      storyboardSheet,
+    ], { stdio: 'ignore' });
+    console.log(`✅ Gate 4 (Visual Storyboard): ${gate4Keyframes.length} keyframes + sheet in ${Date.now() - tG4}ms`);
+
+    // Gate 5: Render frames with per-scene cache & atomic checkpointing
+    const tG5 = Date.now();
+    for (let f = 0; f < totalFrames; f++) {
+      const sc = timeline.scenes.find((s) => f >= s.startFrame && f < s.endFrame)
+        || timeline.scenes[timeline.scenes.length - 1];
+      const expectedKey = sceneHashes.scenes[sc.sceneId];
+      const frameFile = path.join(framesDir, `frame_${String(f).padStart(5, '0')}.png`);
+
+      if (frameCache[f] === expectedKey && fs.existsSync(frameFile)) {
+        cacheHits++;
+        continue;
+      }
+
+      await page.evaluate(
+        ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'final'),
+        { tl: timeline, fi: f }
+      );
+      await page.screenshot({ path: frameFile, type: 'png' });
+      frameCache[f] = expectedKey;
+      renderedCount++;
+
+      if (renderedCount % 30 === 0) {
+        writeJsonAtomic(frameCachePath, frameCache);
+      }
+    }
+    writeJsonAtomic(frameCachePath, frameCache);
+    console.log(`✅ Gate 5 (Frame Render): rendered=${renderedCount}, cacheHits=${cacheHits} in ${((Date.now() - tG5) / 1000).toFixed(2)}s`);
+  } finally {
+    await browser.close();
+  }
+
+  // Gate 4 Motion Probe (2.0s around scene transition: frames 120..179)
+  if (!args.skipProbe && totalFrames >= 180) {
+    const probeMp4 = path.join(jobDir, 'gate4_motion_probe.mp4');
+    execFileSync('ffmpeg', [
+      '-y',
+      '-framerate', String(job.fps),
+      '-start_number', '120',
+      '-i', path.join(framesDir, 'frame_%05d.png'),
+      '-frames:v', '60',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22',
+      probeMp4,
+    ], { stdio: 'ignore' });
+    console.log('✅ Gate 4 (Motion Probe): 2.0s transition clip -> gate4_motion_probe.mp4');
+  }
+
+  // Gate 5 Audio: 2-pass loudnorm (-16 LUFS, TP=-2.0 target)
+  const p1 = spawnSync('ffmpeg', [
+    '-hide_banner', '-i', audioPath,
+    '-af', 'loudnorm=I=-16:TP=-2.0:LRA=11:print_format=json',
+    '-f', 'null', '-',
+  ], { encoding: 'utf8' });
+  const lnMatch = p1.stderr.match(/\{[\s\S]*"input_i"[\s\S]*\}/);
+  if (!lnMatch) throw new Error('Loudnorm pass 1 failed');
+  const ln1 = JSON.parse(lnMatch[0]);
+  const p2Filter = `loudnorm=I=-16:TP=-2.0:LRA=11:measured_I=${ln1.input_i}:measured_TP=${ln1.input_tp}:measured_LRA=${ln1.input_lra}:measured_thresh=${ln1.input_thresh}:offset=${ln1.target_offset}:linear=true`;
+
+  const finalMp4 = path.join(jobDir, 'final.mp4');
+  const muxRes = spawnSync('ffmpeg', [
+    '-y',
+    '-framerate', String(job.fps),
+    '-i', path.join(framesDir, 'frame_%05d.png'),
+    '-i', audioPath,
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-crf', '18',
+    '-af', p2Filter,
+    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
+    '-shortest', '-movflags', '+faststart',
+    finalMp4,
+  ], { encoding: 'utf8' });
+  if (muxRes.status !== 0) {
+    throw new Error(`FFmpeg mux failed: ${muxRes.stderr}`);
+  }
+
+  // Contact sheet
+  const contactSheet = path.join(jobDir, 'contact_sheet.jpg');
+  execFileSync('ffmpeg', [
+    '-y', '-i', finalMp4,
+    '-vf', 'fps=1,scale=360:-1,tile=5x2',
+    '-frames:v', '1',
+    contactSheet,
+  ], { stdio: 'ignore' });
+
+  // Automated QC + Gate 4 parity check
+  const qcReport = runPostRenderQc({
+    jobDir,
+    timeline,
+    finalMp4Path: finalMp4,
+    gate4Keyframes,
+  });
+
+  // Update pipeline_state.json & approvals.json
+  const nowIso = new Date().toISOString();
+  const state = {
+    schemaVersion: 1,
+    jobId: job.jobId,
+    revision: timeline.revision,
+    updatedAt: nowIso,
+    gates: {
+      gate1: { status: 'ready', inputHash, artifactPath: 'facts.md', updatedAt: nowIso },
+      gate2: { status: 'ready', inputHash, artifactHash: sha256File(timelinePath), artifactPath: 'timeline.json', updatedAt: nowIso },
+      gate3: { status: 'ready', inputHash, artifactHash: sha256File(path.join(jobDir, 'gate3_sketch.png')), artifactPath: 'gate3_sketch.png', updatedAt: nowIso },
+      gate4: { status: 'ready', inputHash, artifactHash: sha256File(path.join(jobDir, 'gate4_storyboard.png')), artifactPath: 'gate4_storyboard.png', updatedAt: nowIso },
+      gate5: { status: qcReport.passed ? 'ready' : 'failed', inputHash, artifactHash: sha256File(finalMp4), artifactPath: 'final.mp4', updatedAt: nowIso },
     },
   };
-});
+  const validateState = loadValidator('pipeline_state.schema.json');
+  if (!validateState(state)) throw new Error(`Invalid pipeline_state: ${JSON.stringify(validateState.errors)}`);
+  writeJsonAtomic(path.join(jobDir, 'pipeline_state.json'), state);
 
-const inputHash = sha256Json({ job, cues, audioHash: sha256File(audioPath) });
-const timeline = {
-  schemaVersion: 1,
-  jobId: job.jobId,
-  revision: job.revision || 1,
-  aspect: job.aspect,
-  width: dimensions.width,
-  height: dimensions.height,
-  fps: job.fps,
-  totalFrames,
-  seed: job.seed,
-  buildIdentity: {
-    engineVersion: '0.1.0-phase0b',
-    styleId: job.styleId,
-    styleVersion: '0.1.0',
+  const existingApprovals = fs.existsSync(approvalsPath)
+    ? JSON.parse(fs.readFileSync(approvalsPath, 'utf8'))
+    : { schemaVersion: 1, jobId: job.jobId, records: [] };
+  existingApprovals.records.push({
+    gate: 'gate5',
+    revision: timeline.revision,
+    approvedBy: 'pending-owner-review',
+    approvedAt: nowIso,
+    scope: 'automated-qc-only',
     inputHash,
-    fontHashes: {
-      'Prompt-Regular.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Prompt-Regular.ttf')),
-      'Prompt-Bold.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Prompt-Bold.ttf')),
-      'NotoSansThai.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'NotoSansThai.ttf')),
-    },
-  },
-  scenes: compiledScenes,
-};
+    artifactHash: sha256File(finalMp4),
+    notes: `Automated QC completed (rendered=${renderedCount}, cacheHits=${cacheHits}); awaiting Philip review.`,
+  });
+  const validateApprovals = loadValidator('approvals.schema.json');
+  if (!validateApprovals(existingApprovals)) throw new Error(`Invalid approvals: ${JSON.stringify(validateApprovals.errors)}`);
+  writeJsonAtomic(approvalsPath, existingApprovals);
 
-const validateTimeline = loadValidator('timeline.schema.json');
-if (!validateTimeline(timeline)) {
-  console.error('❌ Compiled timeline invalid:', validateTimeline.errors);
-  process.exit(1);
-}
-const timelinePath = path.join(jobDir, 'timeline.json');
-fs.writeFileSync(timelinePath, JSON.stringify(timeline, null, 2));
-const srtPath = path.join(jobDir, 'subtitles.srt');
-fs.writeFileSync(srtPath, buildSrt(timeline));
-console.log(`✅ Gate 2 (Compile Timeline): ${totalFrames} frames @ ${job.fps}fps (${timeline.width}x${timeline.height})`);
+  console.log('\n=== Gate 5 QC Summary ===');
+  console.log(JSON.stringify({ passed: qcReport.passed, renderedCount, cacheHits, audio: qcReport.audio, gate4Parity: qcReport.gate4Parity }, null, 2));
 
-// Launch Chromium once for Gate 3, Gate 4, and Gate 5 (warm reuse)
-const chromiumPath = findChromium();
-const html = buildRendererHtml(ROOT);
-const browser = await chromium.launch({
-  executablePath: chromiumPath,
-  headless: true,
-  args: ['--no-sandbox', '--disable-dev-shm-usage'],
-});
-
-const gate4Keyframes = [];
-try {
-  const page = await browser.newPage({ viewport: { width: timeline.width, height: timeline.height } });
-  await page.setContent(html, { waitUntil: 'load' });
-
-  // Gate 3: Layout Sketch (1 keyframe per scene in wireframe mode)
-  const tG3 = Date.now();
-  const sketchPngs = [];
-  for (const sc of timeline.scenes) {
-    const midFrame = Math.floor((sc.startFrame + sc.endFrame) / 2);
-    await page.evaluate(
-      ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'sketch'),
-      { tl: timeline, fi: midFrame }
-    );
-    const outPng = path.join(g3Dir, `sketch_${sc.sceneId}.png`);
-    await page.screenshot({ path: outPng, type: 'png' });
-    sketchPngs.push(outPng);
+  if (!qcReport.passed) {
+    console.error('\n❌ Automated QC failed!');
+    process.exit(1);
   }
-  const sketchSheet = path.join(jobDir, 'gate3_sketch.png');
-  execFileSync('ffmpeg', [
-    '-y',
-    ...sketchPngs.flatMap((p) => ['-i', p]),
-    '-filter_complex', `hstack=inputs=${sketchPngs.length},scale=1080:-1`,
-    sketchSheet,
-  ], { stdio: 'ignore' });
-  console.log(`✅ Gate 3 (Layout Sketch): rendered ${sketchPngs.length} scenes in ${Date.now() - tG3}ms -> gate3_sketch.png`);
-
-  // Gate 4: Visual Storyboard (Full-color keyframes at exact frame indices)
-  const tG4 = Date.now();
-  const keyframeIndices = [
-    { sceneId: 'scene-1', frameIndex: 45 },  // t=1.5s (route active + caption 1)
-    { sceneId: 'scene-2', frameIndex: 195 }, // t=6.5s (zoom active + caption 3)
-  ];
-  for (const kf of keyframeIndices) {
-    await page.evaluate(
-      ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'final'),
-      { tl: timeline, fi: kf.frameIndex }
-    );
-    const fullPng = path.join(g4Dir, `storyboard_${kf.sceneId}_f${kf.frameIndex}.png`);
-    await page.screenshot({ path: fullPng, type: 'png' });
-    gate4Keyframes.push({ ...kf, pngPath: fullPng });
-  }
-  const storyboardSheet = path.join(jobDir, 'gate4_storyboard.png');
-  execFileSync('ffmpeg', [
-    '-y',
-    ...gate4Keyframes.flatMap((k) => ['-i', k.pngPath]),
-    '-filter_complex', `hstack=inputs=${gate4Keyframes.length},scale=1080:-1`,
-    storyboardSheet,
-  ], { stdio: 'ignore' });
-  console.log(`✅ Gate 4 (Visual Storyboard): rendered ${gate4Keyframes.length} full-size keyframes + sheet in ${Date.now() - tG4}ms`);
-
-  // Gate 5: Render all 300 frames deterministically
-  const tG5 = Date.now();
-  for (let f = 0; f < totalFrames; f++) {
-    await page.evaluate(
-      ({ tl, fi }) => window.renderTimelineFrame(tl, fi, 'final'),
-      { tl: timeline, fi: f }
-    );
-    const frameFile = path.join(framesDir, `frame_${String(f).padStart(5, '0')}.png`);
-    await page.screenshot({ path: frameFile, type: 'png' });
-  }
-  console.log(`✅ Gate 5 (Frame Render): ${totalFrames} frames rendered in ${((Date.now() - tG5) / 1000).toFixed(2)}s`);
 } finally {
-  await browser.close();
+  releaseLock();
 }
-
-// Gate 5 Audio: 2-pass loudnorm (-16 LUFS, TP=-2.0 target to prevent AAC overshoot)
-const p1 = spawnSync('ffmpeg', [
-  '-hide_banner', '-i', audioPath,
-  '-af', 'loudnorm=I=-16:TP=-2.0:LRA=11:print_format=json',
-  '-f', 'null', '-',
-], { encoding: 'utf8' });
-const lnMatch = p1.stderr.match(/\{[\s\S]*"input_i"[\s\S]*\}/);
-if (!lnMatch) throw new Error('Loudnorm pass 1 failed');
-const ln1 = JSON.parse(lnMatch[0]);
-const p2Filter = `loudnorm=I=-16:TP=-2.0:LRA=11:measured_I=${ln1.input_i}:measured_TP=${ln1.input_tp}:measured_LRA=${ln1.input_lra}:measured_thresh=${ln1.input_thresh}:offset=${ln1.target_offset}:linear=true`;
-
-const finalMp4 = path.join(jobDir, 'final.mp4');
-const muxRes = spawnSync('ffmpeg', [
-  '-y',
-  '-framerate', String(job.fps),
-  '-i', path.join(framesDir, 'frame_%05d.png'),
-  '-i', audioPath,
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-crf', '18',
-  '-af', p2Filter,
-  '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
-  '-shortest', '-movflags', '+faststart',
-  finalMp4,
-], { encoding: 'utf8' });
-if (muxRes.status !== 0) {
-  throw new Error(`FFmpeg mux failed: ${muxRes.stderr}`);
-}
-
-// Contact sheet (10 frames @ 1fps in 5x2 grid)
-const contactSheet = path.join(jobDir, 'contact_sheet.jpg');
-execFileSync('ffmpeg', [
-  '-y', '-i', finalMp4,
-  '-vf', 'fps=1,scale=360:-1,tile=5x2',
-  '-frames:v', '1',
-  contactSheet,
-], { stdio: 'ignore' });
-
-// Automated QC + Gate 4 parity check
-const qcReport = runPostRenderQc({
-  jobDir,
-  timeline,
-  finalMp4Path: finalMp4,
-  gate4Keyframes,
-});
-
-// Record pipeline_state.json & approvals.json
-const nowIso = new Date().toISOString();
-const state = {
-  schemaVersion: 1,
-  jobId: job.jobId,
-  revision: timeline.revision,
-  updatedAt: nowIso,
-  gates: {
-    gate1: { status: 'ready', inputHash, artifactPath: 'facts.md', updatedAt: nowIso },
-    gate2: { status: 'ready', inputHash, artifactHash: sha256File(timelinePath), artifactPath: 'timeline.json', updatedAt: nowIso },
-    gate3: { status: 'ready', inputHash, artifactHash: sha256File(path.join(jobDir, 'gate3_sketch.png')), artifactPath: 'gate3_sketch.png', updatedAt: nowIso },
-    gate4: { status: 'ready', inputHash, artifactHash: sha256File(path.join(jobDir, 'gate4_storyboard.png')), artifactPath: 'gate4_storyboard.png', updatedAt: nowIso },
-    gate5: { status: qcReport.passed ? 'ready' : 'failed', inputHash, artifactHash: sha256File(finalMp4), artifactPath: 'final.mp4', updatedAt: nowIso },
-  },
-};
-const validateState = loadValidator('pipeline_state.schema.json');
-if (!validateState(state)) throw new Error(`Invalid pipeline_state: ${JSON.stringify(validateState.errors)}`);
-fs.writeFileSync(path.join(jobDir, 'pipeline_state.json'), JSON.stringify(state, null, 2));
-
-const approvals = {
-  schemaVersion: 1,
-  jobId: job.jobId,
-  records: [
-    {
-      gate: 'gate5',
-      revision: timeline.revision,
-      approvedBy: 'pending-owner-review',
-      approvedAt: nowIso,
-      scope: 'automated-qc-only',
-      inputHash,
-      artifactHash: sha256File(finalMp4),
-      notes: 'Automated QC completed; awaiting Philip visual and audio review.',
-    },
-  ],
-};
-const validateApprovals = loadValidator('approvals.schema.json');
-if (!validateApprovals(approvals)) throw new Error(`Invalid approvals: ${JSON.stringify(validateApprovals.errors)}`);
-fs.writeFileSync(path.join(jobDir, 'approvals.json'), JSON.stringify(approvals, null, 2));
-
-console.log('\n=== Gate 5 QC Report ===');
-console.log(JSON.stringify(qcReport, null, 2));
-
-if (!qcReport.passed) {
-  console.error('\n❌ Automated QC failed!');
-  process.exit(1);
-}
-console.log(`\n🎉 Phase 0B Vertical Slice complete! Outputs in jobs/${job.jobId}/`);

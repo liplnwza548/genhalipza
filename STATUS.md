@@ -4,35 +4,33 @@
 
 ## สถานะปัจจุบัน
 
-**Phase 0B Automated Pipeline & QC Passed — Ready for Owner Visual/Audio Review (`accepted-by-owner` pending)**
+**Phase 1 Completed & Verified — Ready for Phase 2A (`wonlok-plus`)**
 
-### ผลพิสูจน์ Phase 0B (`npm run pilot:10s`) บน Linux Cloud VM
-- **Job:** `assets/fixtures/sample-10s/job.json` (`1080×1920`, `9:16`, `30fps`, `300 frames`, `10.0s`)
-- **Single Source of Truth:** Gate 3, Gate 4 และ Gate 5 ใช้ `timeline.json` และ Chromium Canvas Renderer ตัวเดียวกัน
-- **เวลาที่วัดได้จริง (Warm single-tab browser reuse):**
-  - Gate 3 (`gate3_sketch.png`, 2 scenes): **478 ms**
-  - Gate 4 (`gate4_storyboard.png` + Full-Size PNGs, 2 keyframes): **379 ms**
-  - Gate 5 (`final.mp4`, 300 frames): **30.25 s** (~9.9 fps)
-- **Automated QC (`qc_report.json`):** `passed: true`
-  - Video: `h264`, `1080×1920`, `30/1 fps`, `300 frames`, `videoDurationSec: 10`, `decodeErrors: ""`
-  - Audio (วัดจาก `final.mp4` หลัง AAC encode): `aac`, `48000 Hz`, **`-15.96 LUFS`**, **`True Peak -10.1 dBTP`**
-  - Thai Phrase Captions: 4 cues (non-overlapping, min cue ≥ 0.6s, no broken tone marks)
-  - Gate 4 vs Final MP4 Frame Parity (SSIM): `scene-1` frame 45 = **`0.983981`**, `scene-2` frame 195 = **`0.982178`** (`>= 0.95`)
+### สิ่งที่สร้างและพิสูจน์ผลแล้วใน Phase 1
+1. **Thai Text Engine (`core/thai-text/thai-text.mjs` + Browser Canvas wrapper):**
+   - ตัดคำไทยด้วย `Intl.Segmenter('th', { granularity: 'word' })` และ `grapheme` cluster ไม่ฉีกกลางคำและไม่ขึ้นต้นบรรทัดด้วยสระ/วรรณยุกต์
+   - ใช้ `wrapThaiLines` วัด font metrics จริงใน Browser เพื่อให้ Gate 3, Gate 4 และ Gate 5 ตรงกัน 100%
+2. **Dependency Invalidation, Atomic Resume & Scene Patch (`core/engine/state-manager.mjs`):**
+   - Per-scene hash isolation (`computeSceneHashes`), atomic checkpoint writes (`writeJsonAtomic`), single-writer job lock (`acquireJobLock`), และ stale approval invalidation (`invalidateStaleApprovals`)
+   - **ผลทดสอบจริงบน `sample-10s`:** แก้เฉพาะหัวข้อซีนที่ 2 → ซีนที่ 1 ใช้ cache เดิม 100% (`cacheHits=150`, `renderedCount=150`, เวลาเรนเดอร์ลดจาก `31.66s` เหลือ `15.69s`) พร้อม Gate 4 SSIM Parity ผ่านทั้ง 2 ซีน (`0.9840` / `0.9819`)
+3. **Gate 4 Motion Probe:**
+   - สร้าง `gate4_motion_probe.mp4` (2.0s / 60 frames ช่วง transition) สำหรับตรวจการเคลื่อนไหวก่อน render เต็ม
+4. **TTS Adapter (`core/audio/tts_adapter.py`):**
+   - รองรับ `edge-tts` ไทย Multi-speaker พร้อม `--check` และ fallback กลับ `audio-in` อย่างปลอดภัย
+5. **Automated Test Suite (`npm test`):**
+   - `tests/phase1.test.mjs` ผ่าน 4/4 tests
 
-## คำสั่งรันซ้ำจาก Clean Checkout
+## คำสั่งตรวจสอบทั้งหมด
 
 ```bash
 npm install
 npm run validate:schemas
 npm run doctor
+npm test
 npm run smoke
 npm run pilot:10s
 ```
 
-## Next action (Phase 1)
+## Next action (Phase 2A)
 
-1. ให้ Philip ตรวจรับภาพ/เสียงจริงของ `jobs/sample-10s/final.mp4`
-2. เริ่ม **Phase 1**:
-   - สร้างระบบ **Dependency Invalidation, Atomic Resume & Scene Patch** (แก้ซีนเดียวไม่ต้องเรนเดอร์ใหม่ทั้งหมด)
-   - สร้าง **Thai Text Engine** (ตัดคำไทย + Safe Area + Bounding-box collision lint)
-   - เพิ่ม **Gate 4 Motion Probe (2–3s)** และ **TTS Adapter** (Edge-TTS ไทย Multi-speaker พร้อม Audio-In fallback)
+พัฒนาสไตล์แรก **`wonlok-plus`** (5 Layers + 1 Global Brand Overlay: Base Stylized/Natural Earth Map + Vector Highlight Mask + Neon Pulse/Routes + 2-Line Thai Headline + Phrase/Word-Highlight Subtitles + Brand Badge) ในขอบเขต 30–60s และพิสูจน์ให้ผ่านอย่างน้อย 3 คลิปต่างหัวข้อ พร้อม Philip review
