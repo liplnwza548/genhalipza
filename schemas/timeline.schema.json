@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://genhalipza.local/schemas/timeline.schema.json",
+  "title": "GenhaLipza Compiled Timeline (Single Source of Truth)",
+  "type": "object",
+  "required": ["schemaVersion", "jobId", "revision", "width", "height", "fps", "totalFrames", "seed", "scenes"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "jobId": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "aspect": { "type": "string", "enum": ["9:16", "16:9", "1:1", "4:5"] },
+    "width": { "type": "integer", "minimum": 64 },
+    "height": { "type": "integer", "minimum": 64 },
+    "fps": { "type": "integer", "enum": [24, 25, 30, 60] },
+    "totalFrames": { "type": "integer", "minimum": 1 },
+    "seed": { "type": "integer", "minimum": 0 },
+    "buildIdentity": {
+      "type": "object",
+      "required": ["engineVersion", "styleId", "styleVersion", "inputHash"],
+      "properties": {
+        "engineVersion": { "type": "string" },
+        "styleId": { "type": "string" },
+        "styleVersion": { "type": "string" },
+        "inputHash": { "type": "string" },
+        "fontHashes": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sceneId", "recipe", "startFrame", "endFrame", "headline", "captions"],
+        "properties": {
+          "sceneId": { "type": "string", "minLength": 1 },
+          "recipe": { "type": "string", "minLength": 1 },
+          "startFrame": { "type": "integer", "minimum": 0 },
+          "endFrame": { "type": "integer", "minimum": 1 },
+          "headline": { "type": "string" },
+          "captions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["text", "startSec", "endSec"],
+              "properties": {
+                "text": { "type": "string" },
+                "startSec": { "type": "number", "minimum": 0 },
+                "endSec": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            }
+          },
+          "params": { "type": "object" }
+        }
+      }
+    }
+  }
+}

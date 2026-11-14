@@ -1,141 +1,147 @@
-# GenhaLipza — Master Plan & Architecture Roadmap
+# GenhaLipza — Master Plan & Architecture Roadmap (Revised v2)
 
-> เอกสารฉบับนี้รวบรวมผลการออกแบบระบบทั้งหมดจากการสัมภาษณ์และตรวจโค้ดเดิมใน `liplnwza-motion-kit` และ `motionforge` เพื่อใช้รีวิวและเริ่มลงมือพัฒนา `genhalipza` อย่างเป็นระบบ
+> เอกสารฉบับนี้ปรับปรุงจากแผนตั้งต้นหลังผ่านการรีวิวเชิงวิศวกรรมใน [`CHATGPT_REVIEW_2026-11-15.md`](CHATGPT_REVIEW_2026-11-15.md) เพื่อแยก **เป้าหมาย / สิ่งที่พิสูจน์แล้ว / สิ่งที่ยังไม่ทดสอบ** ให้ชัดเจน และลดความเสี่ยงที่จะค้างกลางทาง
 
 ---
 
 ## 1. เป้าหมายและหลักการสำคัญ (Core Principles)
 
-| หัวข้อ | ข้อกำหนดที่ล็อกไว้ | เหตุผล |
+| หัวข้อ | ข้อกำหนดที่ล็อกไว้ | เหตุผลและขอบเขต |
 | :--- | :--- | :--- |
-| **Repo & ลิขสิทธิ์** | Clean-Room 100% บน `liplnwza548/genhalipza` (Public) | สามารถใช้เอง เผยแพร่ หรือต่อยอดเป็นสินค้าได้โดยไม่ติดลิขสิทธิ์โค้ด/เทมเพลตภายนอก (33 สกิลอ้างอิงเดิมเก็บแยกส่วนตัวนอก Repo นี้) |
-| **เครื่องที่รันหลัก** | **Cloud VM First** (Gemini Task / ChatGPT Work / Antigravity VM) + รันบน Windows/Mac ได้ | สั่งงานจากที่ไหนก็ได้โดยไม่ติด path เฉพาะเครื่อง (แก้ปัญหา path ล็อกเครื่องเดิมใน `motionforge`) |
-| **ตัวละครหลัก (Mascot)** | ใช้ **มาสคอต LiplnwZa เดิม** (6 ท่าทาง + 6 รูปปาก) เป็นสไตล์เรือธงประจำช่อง + เพิ่ม **Parametric SVG Rig** สำหรับสไตล์เล่าเรื่องใหม่ | ได้เอกลักษณ์ช่องเดิมทันที และมี Rig ใหม่ที่เปลี่ยนทรงผม/ชุด/ท่าทางได้เป็นร้อยแบบสำหรับสไตล์อื่น |
-| **ภาษาและสัดส่วน** | **ภาษาไทย 100%** + **Multi-Aspect** (`9:16`, `16:9`, `1:1`, `4:5`) | จัดตัดคำไทยไม่ฉีกกลางคำ กันสระ/วรรณยุกต์ขาด และใช้สคริปต์เดียวออกได้ทั้ง TikTok/Reels และ YouTube |
-| **AI Agent Target** | แกนกลางเดียว → Export เป็นสกิลได้หลายแพลตฟอร์ม (Antigravity/Gemini, OpenAI Codex, Claude Code) | สร้างและแก้ที่เดียว แต่ส่งออกไปใช้งานได้ทุก Agent |
+| **Repo & ลิขสิทธิ์** | Clean-Room 100% บน `liplnwza548/genhalipza` (Public) | Public repo เก็บเฉพาะโค้ด, schema, docs และ **fixture/placeholder ที่เผยแพร่ได้** เท่านั้น ส่วน **Owner Assets** (มาสคอตตัวจริง/เสียงส่วนตัว) และ **Reference ภายนอก (`GenhahaSkills`)** เก็บแยกนอก repo นี้ 100% |
+| **เครื่องที่รันหลัก** | **Cloud VM First** (Linux VM เป้าหมายหลัก 1 แห่งก่อน) + รันบน Windows/Mac ได้ | ไม่ติด path ล็อกเครื่องแบบเดิม; พิสูจน์รันจริงบน Linux VM ทีละ environment แทนการเหมารวมว่าพร้อมทุกแพลตฟอร์มทันที |
+| **ตัวละครหลัก (Mascot)** | **Parametric Vector/Canvas** ในแกนกลาง + รองรับ **มาสคอต LiplnwZa** แบบปลั๊กอินส่วนตัว | เริ่มพิสูจน์ระบบด้วย vector/map ก่อน แล้วค่อยต่อเข้ากับมาสคอต LiplnwZa (ผ่าน private asset path) ใน Phase 2B |
+| **ภาษาและสัดส่วน** | **ภาษาไทย 100%** + **Multi-Aspect** (เริ่ม `9:16` ก่อน แล้วขยาย `16:9`, `1:1`, `4:5`) | ตัดคำไทยไม่ฉีกกลางคำ กันสระ/วรรณยุกต์ขาด; เริ่มพิสูจน์ `9:16` จนนิ่งก่อนขยายสัดส่วนอื่น |
+| **AI Agent Target** | แกนกลางเดียว + Manifest/CLI ชัด → Export เป็นสกิลหลายแพลตฟอร์มใน Phase 4 | Antigravity/Gemini, OpenAI Codex (`.codex-plugin`), Claude Code (ทดสอบติดตั้งและรันจริงต่อแพลตฟอร์ม) |
 
 ---
 
-## 2. การนำของดีจาก 2 Repo เก่ามาใช้จริง (Reuse Audit)
+## 2. การนำของดีจาก 2 Repo เก่ามาใช้ (Reuse & Rights Audit)
 
-จากการตรวจโค้ดใน Repo เดิมทั้งสองตัว พบโมดูลที่นำมาประกอบเข้ากับ `genhalipza` ได้ทันทีประมาณ **65–70%**:
+แทนการประเมินแบบเหมารวม (65–70%) เราแยกโมดูลจาก repo เดิมเป็น **Reuse Matrix** ที่ระบุสิทธิ์และสถานะจริงก่อนพอร์ต:
 
-### 2.1 จาก `liplnwza548/liplnwza-motion-kit` (v0.2.1 · MIT)
-- **ระบบเสียงและ Lip-sync:**
-  - `renderer/assemble_voice.py` — ประกอบไฟล์เสียงพากย์เป็นท่อนๆ
-  - `renderer/prepare_cues.py`, `renderer/mfa_to_cues.py`, `renderer/dedup_visemes.py` — ถอดจังหวะคำ (`words.json`) และรูปปาก (`visemes.json`) สำหรับมาสคอต
-  - `renderer/audio_mix.py` & `renderer/post_render_gate.py` — 2-pass loudnorm (`-16 LUFS`, `True Peak <= -1.0 dBTP` พร้อมเทคนิคตั้ง `TP=-2.0` และ `AAC 192k` เพื่อกัน overshoot)
-- **มาสคอตและ Layout:**
-  - `brand/mascot/poses/` (6 ท่า) และ `brand/mascot/faces/` + `assets/mascot/mouth_rig/`
-  - `layouts/aot/SPEC.md` (3-zone layout ที่พิสูจน์แล้ว: กรอบภาพบน / แถบคำกลาง / มาสคอตล่าง)
-- **ระบบ Theme Schema & QC:**
-  - `themes/theme.schema.json` (ใช้เป็นฐานขยายเป็น `style.manifest.schema.json`)
-  - `renderer/preflight.py`, `tests/qc.py`, `tests/test_*.py` (Contact Sheet, QC check, Unit tests)
-  - `skills/liplnwza-motion/SKILL.md` + `agents/openai.yaml`
-- **ส่วนที่เปลี่ยนใหม่:** เปลี่ยนจากตัววาด Python/Pillow ไปเป็น **HTML5 Canvas + SVG + GSAP ผ่าน Headless Chromium** เพื่อให้ขยับลื่นและแตกเป็น 100+ สไตล์ได้ง่าย
-
-### 2.2 จาก `liplnwza548/motionforge`
-- **สูตรความสมจริง (Prompt Vault & Math):**
-  - สูตรใน `docs/FLASH-VS-OPUS-BENCHMARK.md` และ `benchmark/`: Spine Kinematics (กระดูกสันหลังพริ้ว), Gerstner Waves, Particle Engine, Telemetry Linkage, และกฎ *"Draw organs in the spine's local frame"*
-- **วิธีคิด Frame-by-Frame Renderer:**
-  - `render60.js` (แนวคิดควบคุมเวลา `t` แบบ Deterministic เพื่อเรนเดอร์ทีละเฟรมด้วย Chromium + FFmpeg)
-- **ส่วนที่แก้ใหม่:** ลบการ hardcode path เครื่อง Windows/เฉพาะกิจออกทั้งหมด ทำให้เป็น Portable Engine ที่รันบน Linux Cloud VM ได้ทันทีใน 1 คำสั่ง (`doctor` check ผ่านครบ)
+| โมดูล / แนวคิด | ต้นทาง & License | สถานะจริง & สิ่งที่ต้องแก้ | แผนใช้งาน |
+| :--- | :--- | :--- | :--- |
+| **Audio Mix & Post-Render Gate** (`audio_mix.py`, `post_render_gate.py`) | `liplnwza-motion-kit` (MIT) | แนวคิดวัด MP4 หลัง encode (`-16 LUFS`, `TP <= -1.0 dBTP`) ใช้ได้ แต่ต้องวัดใหม่กับ encoder บน VM เป้าหมาย | พอร์ตเข้า `core/audio/` และ `core/qa/` ใน Phase 0A–0B |
+| **Voice Assembly & Cues** (`assemble_voice.py`, `prepare_cues.py`, `mfa_to_cues.py`, `dedup_visemes.py`) | `liplnwza-motion-kit` (MIT) | `prepare_cues.py` ต้องใช้ known script + local model (chunk ≤29s); `mfa_to_cues.py` เป็นตัวแปลงผลไม่ใช่ตัวติดตั้ง MFA; visemes เป็น heuristic | เก็บเป็น optional adapter; Phase 0B เริ่มจาก **Audio-In + cues ที่ตรวจแล้ว** ก่อน |
+| **Theme Schema & QC Tests** (`themes/theme.schema.json`, `preflight.py`, `tests/qc.py`) | `liplnwza-motion-kit` (MIT) | โครงสร้าง JSON Schema และแนวคิด Contact Sheet ใช้เป็นฐานได้ดี | ขยายเป็น `style.manifest.schema.json` และ QC gate ใน Phase 0A–1 |
+| **Raw Mascot & Voice Assets** (`brand/mascot/`, `assets/mascot/`) | `liplnwza-motion-kit` (`ASSET_RIGHTS.md`) | **`ASSET_RIGHTS.md` จำกัดการเผยแพร่ raw mascot และสิทธิ์เสียง** แม้โค้ดจะเป็น MIT | **ห้ามย้ายเข้า public repo** ใช้ placeholder fixture ใน `genhalipza` และโหลดของจริงจาก private asset path |
+| **Deterministic Renderer** (`render60.js` + สูตรใน `benchmark/`) | `motionforge` (ไม่มีไฟล์ LICENSE) | `render60.js` มี absolute path, hardcode URL และ skip frame ตามไฟล์; `MF-002` ระบุ full render/determinism ยังไม่ยืนยัน | นำเฉพาะแนวคิด `renderAt(t)` มาเขียนใหม่แบบ Clean-Room ที่ portable และมี cache key/seed ชัดเจน |
 
 ---
 
 ## 3. เวิร์กโฟลว์การผลิตแบบ 5 ด่าน (5-Gate AI Director Pipeline)
 
-ออกแบบให้ตรงตามวิธีการทำงานที่คุณต้องการจริง — **ตรวจได้ทุกจังหวะก่อนเสียเวลาเรนเดอร์ยาว**:
+ทุกด่านใช้ **Compiled Scene & Timeline JSON ชุดเดียวกัน** เป็น Single Source of Truth เพื่อรับประกันว่า Sketch, Storyboard และ Final MP4 ตรงกัน 100%:
 
 ```text
-[Gate 1: รับโจทย์ & ค้นข้อมูล]
-  - รับ "หัวข้อ/ลิงก์" หรือรับ "ไฟล์เสียงพากย์ของคุณ" เข้ามา
+[Gate 1: Brief & Facts]
+  - รับ "หัวข้อ/ลิงก์" หรือรับ "ไฟล์เสียงพากย์ (Audio-In)" เข้ามา
   - AI ค้นข้อมูลเบื้องต้น + สรุปข้อเท็จจริงและแหล่งอ้างอิง (Facts Sheet)
         │
         ▼ (คุณตรวจข้อเท็จจริง)
-[Gate 2: บทพูด & เสียงพากย์ + สไตล์]
-  - AI เสนอบทพูดแบ่งซีน + แนะนำสไตล์/จำนวนตัวละคร
-  - ถ้าคุณไม่ได้ส่งเสียงมา → AI เจนเสียงพากย์ตัวอย่างให้ฟัง (Edge-TTS ไทย หรือ Pro TTS)
-  - ถ้าคุณส่งเสียงมาเอง → AI วิเคราะห์ความยาวและสร้างจังหวะคำ/รูปปาก (words + visemes)
+[Gate 2: Script, Voice & Cues]
+  - AI เสนอบทพูดแบ่งซีน + แนะนำสไตล์
+  - กรณี Audio-In (หลักใน Phase 0B): ตรวจบทคู่กับเสียงจริง -> สร้าง Phrase Captions / Cues ที่ตรวจแล้ว
+  - กรณี TTS (Phase 1+): เจนเสียงพากย์ให้ฟังก่อน (Edge-TTS / Pro adapter พร้อม Audio-In fallback)
         │
-        ▼ (คุณอนุมัติบท & เสียง)
-[Gate 3: ภาพสเก็ตช์โครงร่าง (Layout Sketch)]
-  - AI สร้าง "ภาพสเก็ตช์ลายเส้นขาว-ดำ/Wireframe" ของทุกซีนใน 1 แผ่น (ใช้เวลา < 3 วินาที)
-  - เช็กว่าวางหัวข้อตรงไหน ตัวละครอยู่ตรงไหน ข้อความ/ป้ายไม่บังกัน
+        ▼ (คุณอนุมัติบท & เสียง -> บันทึก approval hash)
+[Gate 3: Layout Sketch (Wireframe / Geometry Match)]
+  - วาดด้วย Layout Bounds, Text Metrics และ Line Breaks จริงจาก Browser (เปลี่ยนสี/texture เป็นเส้นลวด)
+  - แสดง Scene ID, Timecode, Aspect, Revision และสถานะ asset placeholder (Target: ≤5s warm)
         │
         ▼ (คุณอนุมัติการจัดวาง)
-[Gate 4: สตอรี่บอร์ดภาพสีจริง (Visual Storyboard Sheet)]
-  - AI เรนเดอร์เฉพาะ "เฟรมสำคัญของทุกซีน" ด้วยเอนจินจริง (เช่น 8–12 ภาพ ใช้เวลา < 15 วินาที)
-  - รัน Overlap & Safe-Area Lint อัตโนมัติ พร้อมแสดง Timecode ของแต่ละซีน
+[Gate 4: Visual Storyboard (Full-Color Keyframes + Motion Probe)]
+  - เรนเดอร์ด้วย Engine/Font/Seed เดียวกับ Final ที่ Frame Index สำคัญ (ข้อความยาวสุด, กลาง transition, จุดชนป้าย)
+  - มีทั้ง Contact Sheet, Full-Size PNG (ไว้เช็กสระ/วรรณยุกต์) และ Motion Probe 2–3s สำหรับจุดเสี่ยง (Target: ≤15s warm)
         │
         ▼ (คุณดูภาพสีจริงแล้วสั่ง "Render MP4!")
-[Gate 5: เรนเดอร์ MP4 + ตรวจคุณภาพอัตโนมัติ (Render & QC)]
-  - เรนเดอร์เฟรมทั้งหมดด้วย Headless Chromium + FFmpeg (รองรับ Multi-Aspect)
-  - มิกซ์เสียงพูด + Procedural SFX/Ambient + 2-Pass Loudnorm (-16 LUFS / TP <= -1.0 dBTP)
+[Gate 5: Final MP4 & Automated QC]
+  - เรนเดอร์ทุกเฟรมแบบ Deterministic (Node + Chromium CDP -> FFmpeg)
+  - มิกซ์เสียง + 2-Pass Loudnorm (-16 ± 0.5 LUFS / TP <= -1.0 dBTP วัดจาก MP4 หลัง AAC encode)
   - ออกไฟล์: final.mp4 + subtitles.srt + contact_sheet.jpg + qc_report.json
+  - **จบงานเมื่อ:** ผ่าน Automated QC **และ** Philip ตรวจรับภาพ/เสียงจริง
 ```
+
+### ระบบ State, Invalidation & Resume (`jobs/<slug>/`)
+- เก็บสถานะงานใน `pipeline_state.json`, `approvals.json`, `assets.json`, `timeline.json` (เก็บไว้ใน workspace งานส่วนตัว ไม่ commit เสียง/output ลง public repo)
+- **Dependency Invalidation:** แก้บท/เสียง → invalidate cues, Gate 3–5 อัตโนมัติ; แก้เฉพาะซีนที่เวลาเท่าเดิม → invalidate เฉพาะซีนนั้น; เปลี่ยน style/font/aspect/seed → invalidate preview และ frames ที่เกี่ยวข้องทั้งหมด
+- **Atomic Checkpoint:** ใช้ `build_identity` + `effective_input_hash` เป็น cache key ไม่ข้ามเฟรมแค่เพราะเห็นไฟล์ PNG เก่าค้างอยู่
 
 ---
 
 ## 4. สถาปัตยกรรมระบบ (Monorepo Structure)
 
-แบ่งหน้าที่ระหว่าง **Node.js (วาดภาพ & เรนเดอร์เว็บ)** กับ **Python (เสียง, ลิปซิงค์, ตัดคำ, QC)**:
+แบ่งหน้าที่ชัดเจนผ่าน **Versioned JSON** (Node.js คุม Timeline/Browser/FFmpeg; Python ทำงาน Audio/QC เป็นก้อนก่อน-หลัง render ไม่ spawn ต่อเฟรม):
 
 ```text
 genhalipza/
 ├── README.md
+├── STATUS.md
 ├── docs/
 │   ├── MASTER_PLAN.md
-│   └── REVIEW_GUIDE_FOR_CHATGPT.md
+│   ├── REVIEW_GUIDE_FOR_CHATGPT.md
+│   └── CHATGPT_REVIEW_2026-11-15.md
+├── schemas/                  # JSON Schemas: job, timeline, state, approvals, style.manifest
 ├── core/
-│   ├── engine/               # [Node.js] Deterministic clock (renderAt(t)), GSAP, Multi-Aspect safe-area
+│   ├── cli/                  # [Node.js] doctor, render, sketch, storyboard, qc
+│   ├── engine/               # [Node.js] Deterministic renderAt(frameIndex / fps), seed, safe-area
 │   ├── renderer/             # [Node.js] Headless Chromium CDP frame dumper + FFmpeg muxer
-│   ├── sketcher/             # [Node.js] ตัววาด Layout Sketch (Gate 3) & Storyboard Sheet (Gate 4)
-│   ├── rig/                  # [JS/SVG] LiplnwZa Clean-Plate Adapter + Parametric SVG Character Rig
-│   ├── atmosphere/           # [JS/Canvas] หมอก, ฝน, แสงเทียน, ไฟฉาย, Paper Grain, Glow, Caustics
-│   ├── audio/                # [Python] นำเข้าจาก liplnwza-motion-kit (Edge-TTS Multi-speaker, alignment, LUFS mix, procedural SFX)
-│   ├── thai-text/            # [JS+Python] ตัดคำไทย (Intl.Segmenter / PyThaiNLP) + ซับไฮไลต์ + กันสระขาด
+│   ├── thai-text/            # [Browser/Node] วัด font metrics + ตัดคำไทยครั้งเดียวใน Browser เพื่อใช้ร่วมกันทุก Gate
+│   ├── audio/                # [Python] Audio-In cues, TTS adapter (Phase 1+), LUFS mix
 │   └── qa/                   # [Python+Node] Preflight, Overlap Check, Contact Sheet, Post-Render Gate
 ├── styles/
-│   ├── mvp-4/                # 4 สไตล์ชุดเปิด (Wonlok-Plus, LiplnwZa Mascot, Stickman Duo, Mystery Stage)
-│   ├── core-33/              # 33 แม่พิมพ์หลัก (Clean-Room)
-│   └── story-100/            # Style Matrix 100+ แบบ (สร้างจาก Config + Custom Rig/Atmosphere)
+│   ├── mvp-4/                # ทยอยสร้างทีละสไตล์ใน Phase 2 (wonlok-plus -> mascot -> stickman -> mystery)
+│   ├── core-33/              # [Phase 3] 33 แม่พิมพ์หลัก (สร้างจาก Archetypes ที่พิสูจน์แล้ว)
+│   └── story-100/            # [Phase 3] Style Presets (มี thumbnail + sample + acceptance status)
 ├── assets/
-│   ├── mascot-liplnwza/      # มาสคอต LiplnwZa เดิม (6 ท่า + 6 ปาก + profiles.json)
-│   └── fonts/                # ฟอนต์ไทย OFL (Kanit, Prompt, Sarabun, Noto Sans Thai, Sriracha ฯลฯ)
+│   ├── fixtures/             # ตัวอย่าง/placeholder ที่เผยแพร่ใน public repo ได้ (เช่น vector map fixture, dummy mascot)
+│   └── fonts/                # ฟอนต์ไทย OFL (Prompt, Kanit, Noto Sans Thai ฯลฯ)
 ├── studio/
-│   └── exporter/             # ตัวแปลง Skill ไปยัง Antigravity, Codex (.codex-plugin), Claude Code
-└── jobs/                     # พื้นที่ทำงานต่อคลิป (brief -> script -> sketch -> storyboard -> final.mp4)
+│   └── exporter/             # [Phase 4] ตัวแปลง Skill ไปยัง Antigravity, Codex (.codex-plugin), Claude Code
+└── jobs/                     # .gitignored (พื้นที่ทำงานต่อคลิปของ user)
 ```
 
 ---
 
-## 5. แผนพัฒนาเป็นระยะ (Phased Roadmap)
+## 5. แผนพัฒนาเป็นระยะแบบมีเกณฑ์ตรวจรับ (Phased Roadmap)
 
-### Phase 0: วางฐาน Cloud-Ready & เชื่อมของเก่า (สัปดาห์ที่ 1)
-- ตั้งโครงสร้าง `genhalipza/` + สคริปต์ `doctor` เช็ก Chromium, FFmpeg, Python, Node, Thai Fonts ให้รันได้ 100% บน Cloud VM
-- พอร์ตระบบเสียง + `post_render_gate.py` (`-16 LUFS`) + `mascot-liplnwza` จาก `liplnwza-motion-kit` เข้ามา
-- พอร์ต Core Deterministic CDP Renderer (แก้ path ให้เป็น Relative/Temp-safe 100%)
-- **เป้าหมาย:** เรนเดอร์คลิปทดสอบ 10 วินาที ที่มีเสียงไทย + ซับไทย + มาสคอตปากขยับ ได้ในคำสั่งเดียว
+> ไม่ผูกมัดเวลาเป็น "สัปดาห์ที่ 1" จนกว่าจะวัด benchmark จริงบน VM เป้าหมาย — ใช้ **Exit Criteria** เป็นตัวตัดสินการข้าม Phase
 
-### Phase 1: ระบบ 5-Gate (Sketch + Storyboard + Thai Text Engine)
-- สร้าง **Gate 3 (Layout Sketch Generator)** และ **Gate 4 (Storyboard Sheet Generator)**
-- สร้าง `thai-text` (ตัดคำไทยไม่ขาดกลางคำ + ไฮไลต์คำตามเสียงพากย์ + Safe Area สำหรับ `9:16` และ `16:9`)
-- รองรับทั้ง **รับไฟล์เสียงจากผู้ใช้ (Audio-In)** และ **AI พากย์ให้ (TTS Multi-speaker)**
+### Phase 0A: Contracts + Capability Proof
+- ตั้งโครงสร้าง `genhalipza/` + `schemas/` (`job`, `timeline`, `pipeline_state`, `approvals`, `style.manifest` ขั้นต่ำ) + Asset Policy
+- สร้างคำสั่ง `doctor` ตรวจ Node, Python, Chromium, FFmpeg, Thai OFL Fonts และ **Capability Smoke Test** (เปิด Chromium วาดข้อความภาษาไทย 1 เฟรม + mux เสียง fixture)
+- **Exit Criteria:** รันจาก clean checkout บน Linux VM เป้าหมายได้, รายงาน version/dependency ครบ, ผลิตเฟรมไทย + audio mux fixture สำเร็จ
 
-### Phase 2: ปั้น MVP 4 สไตล์ชุดเปิดให้ใช้จริงได้ระดับ 100%
-1. **`wonlok-plus`:** แม่พิมพ์ 5 ชั้น (Base Map/Image + Vector Highlight Mask + Neon Pulse/Routes + 2-Line Thai Headline + Word-Highlight Subtitles + Persistent Brand Badge) — ปิดช่องว่าง 30% ที่เคยขาดให้จบสวยอัตโนมัติ
-2. **`liplnwza-mascot`:** มาสคอต 6 ท่าปากขยับ + ฉากกระดาษตัด/การ์ดขยับ (รองรับทั้ง 9:16 และ 16:9)
-3. **`stickman-duo`:** ตัวละครลายเส้น Parametric SVG 2 ตัวคุยโต้ตอบ (แยกเสียงพากย์ 2 คน + ท่าทาง/สีหน้าตามบท)
-4. **`mystery-stage`:** เวทีสืบสวน/สยองขวัญ (หมอก, ไฟฉาย, แสงเทียน, กระดานเชื่อมโยงด้ายแดง + Procedural Ambient SFX)
+### Phase 0B: 10-Second Vertical Slice (พิสูจน์ครบ 5 ด่าน)
+- สร้างสไตล์นำร่องแบบบาง: **Stylized Vector Map/Route (1–2 ซีน, `9:16`, `30fps`)**
+- ใช้ **Audio-In + Cues ที่ตรวจแล้ว + Phrase Captions ภาษาไทย** (ยังไม่เอา Lip-sync / TTS / ดาวเทียมมาขวาง)
+- ผ่าน Gate 1 → Gate 5 ครบทุกด่านจนได้ `final.mp4`
+- **Definition of Done (DoD):**
+  1. `final.mp4` ขนาด `1080×1920`, `30fps`, `300 เฟรม`, H.264/AAC ตรง profile (ตรวจ video duration แยกจาก AAC padding)
+  2. ซับไทยไม่ซ้อน ไม่ตัดสระ/วรรณยุกต์, min cue ≥ 0.6s, ไม่ล้น safe area
+  3. Gate 4 keyframe ตรงกับเฟรมที่ extract จาก `final.mp4` (ใน tolerance ของ lossy encode)
+  4. เสียง `-16 ± 0.5 LUFS` และ `True Peak <= -1.0 dBTP` วัดจาก **MP4 หลัง AAC encode จริง**
+  5. **Automated QC ผ่าน + Philip ตรวจดูภาพและฟังเสียงจริงแล้วอนุมัติ**
 
-### Phase 3: ขยายสู่ 33 Core Archetypes + 100+ Storytelling Style Factory
-- สร้าง Style Manifest & Token Composer (`Character Rig` × `Art Medium` × `Atmosphere` × `Stage` × `Voice Cast`)
-- ทยอยสร้างแม่พิมพ์ให้ครบ 33 ประเภทหลัก (Explainer, Print/Retro, Geo/3D, Storytelling)
-- ขยายคลัง 100+ สไตล์ใหม่เป็น Batch (Batch ละ 15–20 สไตล์ เน้นหมวด Storytelling & Character เป็นหลัก)
+### Phase 1: Workflow Robustness & Thai Text Engine
+- ทำให้ Gate 3 (Sketch) และ Gate 4 (Storyboard + Motion Probe) สมบูรณ์แบบ
+- ระบบ **Dependency Invalidation, Atomic Resume และ Scene Patch** (แก้ซีนเดียวไม่ต้องเรนเดอร์ใหม่ทั้งหมด, ทดสอบ stale approval / missing asset / interrupted render)
+- สร้าง `thai-text` (ตัดคำไทย + Safe Area) + วัด Benchmark จริง (Cold vs Warm, 20 runs median/p95)
+- เพิ่ม TTS Adapter (Edge-TTS ไทย Multi-speaker) โดยคง Audio-In เป็น fallback
+
+### Phase 2: ปั้น MVP 4 สไตล์ทีละตัว (Sequential Rollout)
+- **Phase 2A (`wonlok-plus`):** แม่พิมพ์ **5 Layers + 1 Global Brand Overlay** (Base Stylized/Natural Earth Map + Vector Highlight Mask + Neon Pulse/Routes + 2-Line Thai Headline + Phrase/Word-Highlight Subtitles + Brand Badge) — จำกัดขอบเขต 30–60s และพิสูจน์ให้ผ่านอย่างน้อย **3 คลิปต่างหัวข้อ** พร้อม Philip review
+- **Phase 2B (เพิ่มทีละสไตล์หลัง `wonlok-plus` นิ่ง):**
+  1. `liplnwza-mascot` (ต่อยอดมาสคอต 6 ท่าจาก private asset path + Lip-sync/Visemes + ฉากกระดาษตัด)
+  2. `stickman-duo` (Parametric SVG 2 ตัวคุยโต้ตอบ แยกเสียง 2 คนตามบท)
+  3. `mystery-stage` (หมอก, ไฟฉาย, แสงเทียน, กระดานสืบสวน + Ambient SFX)
+
+### Phase 3: Style Factory (33 Core + 100+ Presets) & Multi-Aspect
+- สกัด **Engine Capabilities → Reusable Archetypes → Style Presets** จากส่วนที่ใช้ซ้ำได้จริงใน Phase 2
+- ขยาย `16:9` แล้วตามด้วย `1:1`, `4:5` (ทุกสไตล์ใหม่ต้องมี thumbnail + sample + acceptance status)
 
 ### Phase 4: Multi-Platform Skill Exporter
-- สร้าง `lipza export` เพื่อแพ็ก 1 สไตล์ หรือทั้ง Studio ออกเป็น Skill สำหรับ:
-  - Antigravity / Gemini (`SKILL.md` + `scripts/`)
-  - OpenAI Codex (`.codex-plugin/plugin.json` + `skills/`)
-  - Claude Code (`.claude/skills/`)
+- สร้าง `lipza export` แพ็กสกิลสำหรับ Antigravity/Gemini, OpenAI Codex (`.codex-plugin`), Claude Code
+- **Exit Criteria:** ทดลองติดตั้งและรันจริงอย่างน้อย 1 งานต่อแพลตฟอร์ม
+

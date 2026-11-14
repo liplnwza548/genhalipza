@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://genhalipza.local/schemas/job.schema.json",
+  "title": "GenhaLipza Job Specification",
+  "type": "object",
+  "required": ["schemaVersion", "jobId", "title", "styleId", "aspect", "fps", "seed", "audio"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "jobId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1, "default": 1 },
+    "styleId": { "type": "string", "minLength": 1 },
+    "aspect": { "type": "string", "enum": ["9:16", "16:9", "1:1", "4:5"] },
+    "fps": { "type": "integer", "enum": [24, 25, 30, 60], "default": 30 },
+    "seed": { "type": "integer", "minimum": 0 },
+    "audio": {
+      "type": "object",
+      "required": ["mode", "targetLufs", "maxTruePeakDbtp"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "enum": ["audio-in", "tts"] },
+        "sourcePath": { "type": "string" },
+        "transcriptPath": { "type": "string" },
+        "cuesPath": { "type": "string" },
+        "targetLufs": { "type": "number", "default": -16.0 },
+        "maxTruePeakDbtp": { "type": "number", "default": -1.0 }
+      }
+    },
+    "privateAssetsDir": {
+      "type": "string",
+      "description": "Optional external directory for owner-only assets (never committed to public repo)"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://genhalipza.local/schemas/pipeline_state.schema.json",
+  "title": "GenhaLipza 5-Gate Pipeline State & Invalidation Tracking",
+  "type": "object",
+  "required": ["schemaVersion", "jobId", "revision", "updatedAt", "gates"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "jobId": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "gates": {
+      "type": "object",
+      "required": ["gate1", "gate2", "gate3", "gate4", "gate5"],
+      "additionalProperties": false,
+      "properties": {
+        "gate1": { "$ref": "#/definitions/gateEntry" },
+        "gate2": { "$ref": "#/definitions/gateEntry" },
+        "gate3": { "$ref": "#/definitions/gateEntry" },
+        "gate4": { "$ref": "#/definitions/gateEntry" },
+        "gate5": { "$ref": "#/definitions/gateEntry" }
+      }
+    }
+  },
+  "definitions": {
+    "gateEntry": {
+      "type": "object",
+      "required": ["status", "inputHash"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "ready", "approved", "stale", "failed"]
+        },
+        "inputHash": { "type": "string" },
+        "artifactHash": { "type": "string" },
+        "artifactPath": { "type": "string" },
+        "invalidatedReason": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

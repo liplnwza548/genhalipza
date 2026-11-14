@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Private / Local Owner Assets (never commit to public repo)
+private_assets/
+owner_assets/
+
+# Working Jobs & Temporary Outputs
+jobs/*
+!jobs/.gitkeep
+tmp/
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.env
+.env.*

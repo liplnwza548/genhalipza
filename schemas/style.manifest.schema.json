@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://genhalipza.local/schemas/style.manifest.schema.json",
+  "title": "GenhaLipza Style Manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "archetype",
+    "supportedAspects",
+    "capabilities",
+    "limits",
+    "render",
+    "tokens",
+    "recipes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "archetype": { "type": "string", "minLength": 1 },
+    "supportedAspects": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "enum": ["9:16", "16:9", "1:1", "4:5"] }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "limits": {
+      "type": "object",
+      "required": ["maxCaptionLines"],
+      "properties": {
+        "maxLabels": { "type": "integer", "minimum": 0 },
+        "maxCaptionLines": { "type": "integer", "minimum": 1, "maximum": 4 }
+      }
+    },
+    "render": {
+      "type": "object",
+      "required": ["fps", "seedRequired"],
+      "properties": {
+        "fps": { "type": "integer", "enum": [24, 25, 30, 60] },
+        "seedRequired": { "type": "boolean" }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "required": ["fontFamily", "palette"],
+      "properties": {
+        "fontFamily": { "type": "string" },
+        "palette": { "type": "string" }
+      }
+    },
+    "recipes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "acceptanceJobs": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

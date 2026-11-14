@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://genhalipza.local/schemas/approvals.schema.json",
+  "title": "GenhaLipza Human-in-the-Loop Approvals Log",
+  "type": "object",
+  "required": ["schemaVersion", "jobId", "records"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "jobId": { "type": "string", "minLength": 1 },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["gate", "revision", "approvedBy", "approvedAt", "scope", "inputHash", "artifactHash"],
+        "additionalProperties": false,
+        "properties": {
+          "gate": { "type": "string", "enum": ["gate1", "gate2", "gate3", "gate4", "gate5"] },
+          "revision": { "type": "integer", "minimum": 1 },
+          "approvedBy": { "type": "string", "minLength": 1 },
+          "approvedAt": { "type": "string", "format": "date-time" },
+          "scope": { "type": "string", "minLength": 1 },
+          "inputHash": { "type": "string", "minLength": 1 },
+          "artifactHash": { "type": "string", "minLength": 1 },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

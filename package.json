@@ -1,0 +1,17 @@
+{
+  "name": "genhalipza",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Clean-Room Video Skill Studio & AI Director Pipeline (Phase 0A)",
+  "scripts": {
+    "doctor": "node core/cli/doctor.mjs",
+    "smoke": "node core/cli/smoke.mjs",
+    "validate:schemas": "node core/cli/validate-schemas.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "playwright-core": "^1.51.1"
+  }
+}
