@@ -1,0 +1,66 @@
+{
+  "totalDurationSec": 15.0,
+  "scenes": [
+    {
+      "sceneId": "scene-1",
+      "recipe": "evidence-board",
+      "startSec": 0.0,
+      "endSec": 5.0,
+      "headline": "ปริศนาเรือร้าง แมรี เซเลสต์",
+      "subheadline": "แฟ้มคดีลึกลับกลางแอตแลนติก ปี 1872",
+      "params": {
+        "fogIntensity": 0.7,
+        "evidenceCards": [
+          { "x": 310, "y": 650, "w": 310, "h": 215, "tiltDeg": -5, "tag": "1872", "label": "พบเรือลอยลำไร้คน" },
+          { "x": 760, "y": 720, "w": 310, "h": 215, "tiltDeg": 4, "tag": "10 LIVES", "label": "ลูกเรือหายยกชุด" }
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-2",
+      "recipe": "clue-zoom",
+      "startSec": 5.0,
+      "endSec": 10.0,
+      "headline": "หลักฐานประหลาดบนดาดฟ้าเรือ",
+      "subheadline": "เสบียงอยู่ครบ แต่เรือชูชีพหายไป",
+      "params": {
+        "fogIntensity": 0.85,
+        "evidenceCards": [
+          { "x": 310, "y": 640, "w": 300, "h": 210, "tiltDeg": -4, "tag": "CARGO", "label": "สินค้าครบ 100%" },
+          { "x": 765, "y": 670, "w": 300, "h": 210, "tiltDeg": 3, "tag": "LIFEBOAT", "label": "เรือชูชีพหายไป" },
+          { "x": 540, "y": 935, "w": 330, "h": 210, "tiltDeg": -2, "tag": "NO SIGN", "label": "ไร้ร่องรอยการต่อสู้" }
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-3",
+      "recipe": "case-verdict",
+      "startSec": 10.0,
+      "endSec": 15.0,
+      "headline": "ทฤษฎีที่ยังปิดไม่ลงจนวันนี้",
+      "subheadline": "แฟ้มคดีถูกเก็บถาวรกว่า 150 ปี",
+      "params": {
+        "fogIntensity": 0.75,
+        "stampText": "ยังไม่ปิดคดี • UNSOLVED",
+        "evidenceCards": [
+          { "x": 320, "y": 660, "w": 310, "h": 210, "tiltDeg": -4, "tag": "THEORY 1", "label": "ไอระเหยแอลกอฮอล์" },
+          { "x": 760, "y": 660, "w": 310, "h": 210, "tiltDeg": 5, "tag": "THEORY 2", "label": "พายุคลื่นยักษ์ฉับพลัน" }
+        ]
+      }
+    }
+  ],
+  "captions": [
+    {
+      "text": "ธันวาคมปี 1872 เรือแมรี เซเลสต์ ถูกพบลอยลำไร้ผู้คน",
+      "startSec": 0.3,
+      "endSec": 4.7,
+      "words": [
+        { "text": "ธันวาคมปี 1872 ", "startSec": 0.3, "endSec": 1.6 },
+        { "text": "เรือแมรี เซเลสต์", "startSec": 1.6, "endSec": 3.0 },
+        { "text": "ถูกพบลอยลำไร้ผู้คน", "startSec": 3.0, "endSec": 4.7 }
+      ]
+    },
+    { "text": "แปลกที่สุดคือเสบียงยังครบ แต่เรือชูชีพหายไป", "startSec": 5.2, "endSec": 9.7 },
+    { "text": "ผ่านมา 150 ปี ปริศนานี้ก็ยังคงรอคำตอบที่แท้จริง", "startSec": 10.2, "endSec": 14.6 }
+  ]
+}

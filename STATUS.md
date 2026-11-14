@@ -4,29 +4,37 @@
 
 ## สถานะปัจจุบัน
 
-**Phase 2A (`wonlok-plus`) Automated Verification Passed (3/3 Topics @ 30s) — Ready for Owner Review & Phase 2B**
+**Phase 2 Complete (MVP 4 Styles Verified End-to-End) — Ready for Phase 3 (Style Factory & Multi-Aspect)**
 
-### สิ่งที่สร้างและพิสูจน์ผลแล้วใน Phase 2A (`wonlok-plus`)
-1. **Natural Earth GeoJSON Vector Engine (`assets/maps/ne_110m_countries.geojson` + `core/engine/html-template.mjs`):**
-   - Web Mercator projection + dateline-safe routing, Country Highlight Mask (`ADM0_A3`/`ISO_A3`), Smooth Camera Keyframes (`camFrom` → `camTo`), Neon Routes & Pulse Markers, Compare Cards, 2-Line Thai Headline, Word-Highlight Subtitles, และ Persistent Brand Badge
-   - Style Manifest: [`styles/mvp-4/wonlok-plus/manifest.json`](styles/mvp-4/wonlok-plus/manifest.json) (recipes: `locate`, `trace-route`, `compare`)
-2. **ผลทดสอบ 3 คลิปต่างหัวข้อ (30s / 900 frames / 1080×1920 / 30fps):**
-   - **`wonlok-thai-hsr`** (ไทย: รถไฟความเร็วสูง กรุงเทพฯ–นครราชสีมา): Automated QC `passed: true`, `-15.99 LUFS`, `TP -10.17 dBTP`, SSIM `0.9808 / 0.9838 / 0.9830`
-   - **`wonlok-suez-route`** (โลก: คลองสุเอซ–รอตเทอร์ดัม vs แหลมกู๊ดโฮป): Automated QC `passed: true`, `-15.99 LUFS`, `TP -10.17 dBTP`, SSIM `0.9740 / 0.9756 / 0.9764`
-   - **`wonlok-kra-canal`** (ภูมิภาค: ช่องแคบมะละกา & Landbridge ระนอง–ชุมพร): Automated QC `passed: true`, `-15.99 LUFS`, `TP -10.17 dBTP`, SSIM `0.9793 / 0.9821 / 0.9805`
+### สรุปผลการพัฒนาและตรวจรับจริงทั้ง 4 สไตล์ใน MVP
 
-## คำสั่งรันซ้ำ (3 หัวข้อ `wonlok-plus`)
+1. **`wonlok-plus` (Phase 2A):**
+   - Natural Earth GeoJSON Web Mercator map + Country Highlight Mask + Neon Geo Routes + Compare Cards + Word-Highlight Captions + Brand Badge
+   - ผ่าน Automated QC ครบทั้ง **3 หัวข้อ (30s / 900 frames / 1080×1920)**: `wonlok-thai-hsr`, `wonlok-suez-route`, `wonlok-kra-canal`
+2. **`liplnwza-mascot` (Phase 2B):**
+   - 3-Zone Paper-Cutout Card Stage + Clean-Room Vector Mascot Placeholder (6 poses + 6 visemes + blink) + รองรับ Private Owner PNG Overlay ผ่าน `privateAssetsDir` / `GENHALIPZA_PRIVATE_ASSETS` (แยกสิทธิ์ไฟล์จริงออกจาก public repo)
+   - Clean-Room Thai Vowel-to-Viseme Estimator (`core/audio/thai_visemes.mjs`)
+   - ผ่าน Automated QC (`mvp-mascot-15s`, 450 frames): `-15.93 LUFS`, `TP -10.13 dBTP`, SSIM `0.9880 / 0.9874 / 0.9892`
+3. **`stickman-duo` (Phase 2B):**
+   - Parametric 2-Speaker Stickman Rig (`core/rig/stickman-rig.mjs`) + Active Speaker Spotlight + Gesture/Expression + Multi-speaker Tone Fixture
+   - ผ่าน Automated QC (`mvp-stickman-15s`, 450 frames): `-16.04 LUFS`, `TP -11.66 dBTP`, SSIM `0.9892 / 0.9895 / 0.9879`
+4. **`mystery-stage` (Phase 2B):**
+   - Procedural Canvas Atmosphere (`core/atmosphere/mystery-fx.mjs`: Fog, Flickering Candle, Flashlight Sweep, Vignette) + Polaroid Evidence Board + Animated Red Thread + Procedural Dark Ambient SFX (`core/audio/audio_prep.mjs`)
+   - ผ่าน Automated QC (`mvp-mystery-15s`, 450 frames): `-16.01 LUFS`, `TP -5.31 dBTP`, SSIM `0.9720 / 0.9732 / 0.9718`
+
+## คำสั่งทดสอบและรัน MVP ทั้ง 4 สไตล์
 
 ```bash
+npm run validate:schemas
+npm run doctor
+npm test
 node core/cli/pipeline.mjs run --job assets/fixtures/wonlok-3-topics/thai-hsr/job.json
-node core/cli/pipeline.mjs run --job assets/fixtures/wonlok-3-topics/suez-route/job.json
-node core/cli/pipeline.mjs run --job assets/fixtures/wonlok-3-topics/kra-canal/job.json
+node core/cli/pipeline.mjs run --job assets/fixtures/mvp-mascot/job.json
+node core/cli/pipeline.mjs run --job assets/fixtures/mvp-stickman/job.json
+node core/cli/pipeline.mjs run --job assets/fixtures/mvp-mystery/job.json
 ```
 
-## Next action (Phase 2B)
+## Next action (Phase 3 & Phase 4)
 
-1. ให้ Philip ตรวจรับภาพ/เสียงจริงของ 3 คลิป `wonlok-plus` ใน `jobs/wonlok-*/`
-2. เริ่ม **Phase 2B** เพิ่มอีก 3 สไตล์ทีละตัว:
-   - `liplnwza-mascot` (ต่อยอดมาสคอต 6 ท่าจาก private asset path + placeholder fixture ใน public repo)
-   - `stickman-duo` (Parametric SVG 2 ตัวคุยโต้ตอบ)
-   - `mystery-stage` (หมอก, ไฟฉาย, แสงเทียน, กระดานสืบสวน)
+- **Phase 3 (Style Factory & Multi-Aspect):** สร้าง Style Token/Archetype Composer สำหรับขยายคลัง Core 33 & Storytelling Presets + รองรับ Multi-Aspect (`16:9`, `1:1`, `4:5`) และเพิ่มระบบ Benchmark (Cold vs Warm)
+- **Phase 4 (Multi-Platform Skill Exporter):** สร้าง `lipza export` สำหรับ Antigravity/Gemini, OpenAI Codex (`.codex-plugin`), และ Claude Code

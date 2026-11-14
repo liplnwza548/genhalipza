@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "stickman-duo",
+  "version": "0.1.0",
+  "archetype": "dialogue-duo",
+  "supportedAspects": ["9:16"],
+  "capabilities": [
+    "parametric-stickman-rig",
+    "two-speaker-dialogue",
+    "active-speaker-spotlight",
+    "viseme-lip-sync",
+    "thai-word-highlight-captions"
+  ],
+  "limits": {
+    "maxLabels": 4,
+    "maxCaptionLines": 2
+  },
+  "render": {
+    "fps": 30,
+    "seedRequired": true
+  },
+  "tokens": {
+    "fontFamily": "Prompt",
+    "palette": "duo-studio-dark"
+  },
+  "recipes": ["duo-intro", "duo-debate", "duo-takeaway"],
+  "acceptanceJobs": ["mvp-stickman-15s"]
+}

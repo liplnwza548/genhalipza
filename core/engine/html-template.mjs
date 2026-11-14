@@ -1,10 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { getMascotRigScript } from '../rig/mascot-rig.mjs';
+import { getStickmanRigScript } from '../rig/stickman-rig.mjs';
+import { getMysteryFxScript } from '../atmosphere/mystery-fx.mjs';
+import { getMascotStyleScript } from './styles/liplnwza-mascot.mjs';
+import { getStickmanStyleScript } from './styles/stickman-duo.mjs';
+import { getMysteryStyleScript } from './styles/mystery-stage.mjs';
 
 /**
  * Self-contained HTML5 Canvas renderer for Chromium.
- * Supports both Phase 0B (pilot-map-route) and Phase 2A (wonlok-plus: 5 layers + Brand Overlay).
- * Uses Natural Earth GeoJSON + Web Mercator projection when geojson data is loaded.
+ * Dispatches cleanly across all MVP styles:
+ *   - pilot-map-route / wonlok-plus (GeoJSON Web Mercator + Neon Routes + Compare)
+ *   - liplnwza-mascot (3-Zone Cutout Card + Mascot Rig + Viseme Lip-Sync)
+ *   - stickman-duo (Parametric 2-Speaker Stickman Dialogue)
+ *   - mystery-stage (Fog + Candle + Flashlight + Evidence Board + Red Thread)
  */
 export function buildRendererHtml(rootDir) {
   const toFontDataUri = (filename) => {
@@ -75,7 +84,6 @@ export function buildRendererHtml(rootDir) {
       };
     }
 
-    // Web Mercator projection centered at (camLon, camLat) with zoom (1 = world width ~1080px)
     function mercatorY(latDeg) {
       const lat = clamp(latDeg, -85, 85) * Math.PI / 180;
       return Math.log(Math.tan(Math.PI / 4 + lat / 2));
@@ -84,7 +92,6 @@ export function buildRendererHtml(rootDir) {
     function projectLonLat(lon, lat, camLon, camLat, zoom, W, H) {
       const scale = (W / (2 * Math.PI)) * zoom;
       let dLon = lon - camLon;
-      // Dateline wraparound safety
       if (dLon > 180) dLon -= 360;
       if (dLon < -180) dLon += 360;
       const x = W / 2 + (dLon * Math.PI / 180) * scale;
@@ -164,7 +171,6 @@ export function buildRendererHtml(rootDir) {
       const camLat = lerp(camFrom.lat, camTo.lat, camT);
       const zoom = lerp(camFrom.zoom, camTo.zoom, camT);
 
-      // Graticule grid
       ctx.strokeStyle = isSketch ? 'rgba(100, 116, 139, 0.2)' : 'rgba(56, 189, 248, 0.09)';
       ctx.lineWidth = 1.5;
       for (let lon = -180; lon <= 180; lon += 10) {
@@ -181,7 +187,6 @@ export function buildRendererHtml(rootDir) {
       const highlightSet = new Set((scene.params?.highlightCountries || []).map((c) => String(c).toUpperCase()));
       const features = window.__GEOJSON__?.features || [];
 
-      // Pass A: Base countries
       ctx.fillStyle = isSketch ? 'rgba(148, 163, 184, 0.18)' : 'rgba(30, 41, 59, 0.85)';
       ctx.strokeStyle = isSketch ? 'rgba(71, 85, 105, 0.45)' : 'rgba(56, 189, 248, 0.25)';
       ctx.lineWidth = 1.8;
@@ -204,16 +209,12 @@ export function buildRendererHtml(rootDir) {
         }
       }
 
-      // Pass B: Highlighted Countries (Layer 2: Vector Highlight Mask)
       if (highlightedFeatures.length > 0) {
         ctx.save();
         ctx.fillStyle = isSketch ? 'rgba(37, 99, 235, 0.22)' : 'rgba(14, 165, 233, 0.35)';
         ctx.strokeStyle = isSketch ? '#1d4ed8' : '#38bdf8';
         ctx.lineWidth = 3.5;
-        if (!isSketch) {
-          ctx.shadowColor = '#00e5ff';
-          ctx.shadowBlur = 18;
-        }
+        if (!isSketch) { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 18; }
         for (const feat of highlightedFeatures) {
           const geom = feat.geometry;
           if (!geom) continue;
@@ -227,7 +228,6 @@ export function buildRendererHtml(rootDir) {
         }
         ctx.restore();
       }
-
       return { camLon, camLat, zoom };
     }
 
@@ -239,49 +239,31 @@ export function buildRendererHtml(rootDir) {
         const midX = (p0.x + p3.x) / 2;
         const midY = (p0.y + p3.y) / 2 - Math.hypot(p3.x - p0.x, p3.y - p0.y) * 0.22;
         const p1 = { x: lerp(p0.x, midX, 0.5), y: lerp(p0.y, midY, 0.7) };
-        const p2 = { x: lerp(p3.x, midX, 0.5), y: lerp(p3.y, midY, 0.7) };
+        const p2 = { x: lerp(p3.x, midX, 0.5), y: lerp(p0.y, midY, 0.7) };
 
-        // Base dashed track
-        ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y);
-        ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
         ctx.strokeStyle = isSketch ? '#94a3b8' : 'rgba(148, 163, 184, 0.4)';
-        ctx.lineWidth = 7;
-        ctx.setLineDash([12, 10]);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.lineWidth = 7; ctx.setLineDash([12, 10]); ctx.stroke(); ctx.setLineDash([]);
 
-        // Animated neon route
         const prog = rt.animate === false ? 1 : easeOutCubic(clamp(p * 1.25, 0, 1));
-        const steps = 48;
-        const maxStep = Math.max(1, Math.floor(steps * prog));
-        ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y);
+        const maxStep = Math.max(1, Math.floor(48 * prog));
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
         let head = p0;
         for (let i = 1; i <= maxStep; i++) {
-          const pt = cubicBezierPoint(p0, p1, p2, p3, i / steps);
-          ctx.lineTo(pt.x, pt.y);
-          head = pt;
+          const pt = cubicBezierPoint(p0, p1, p2, p3, i / 48);
+          ctx.lineTo(pt.x, pt.y); head = pt;
         }
         ctx.save();
-        if (!isSketch) {
-          ctx.shadowColor = rt.color || '#00e5ff';
-          ctx.shadowBlur = 20;
-        }
+        if (!isSketch) { ctx.shadowColor = rt.color || '#00e5ff'; ctx.shadowBlur = 20; }
         ctx.strokeStyle = isSketch ? '#0f172a' : (rt.color || '#00e5ff');
-        ctx.lineWidth = 9;
-        ctx.stroke();
+        ctx.lineWidth = 9; ctx.stroke();
         ctx.restore();
 
-        // Pulse ring
         const pulse = (Math.sin(t * Math.PI * 3) + 1) * 0.5;
-        ctx.beginPath();
-        ctx.arc(head.x, head.y, 18 + pulse * 22, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(head.x, head.y, 18 + pulse * 22, 0, Math.PI * 2);
         ctx.strokeStyle = isSketch ? '#334155' : 'rgba(255, 59, 107, 0.75)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
+        ctx.lineWidth = 4; ctx.stroke();
 
-        // Endpoints
         for (const [pt, lbl, col] of [[p0, rt.fromLabel, '#38bdf8'], [p3, rt.toLabel, '#ff3b6b']]) {
           ctx.fillStyle = isSketch ? '#1e293b' : col;
           ctx.beginPath(); ctx.arc(pt.x, pt.y, 14, 0, Math.PI * 2); ctx.fill();
@@ -292,14 +274,10 @@ export function buildRendererHtml(rootDir) {
             const bx = clamp(pt.x - (tw + 30) / 2, 90, W - tw - 120);
             const by = pt.y - 68;
             drawRoundRect(ctx, bx, by, tw + 30, 46, 10);
-            ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.9)';
-            ctx.fill();
-            ctx.strokeStyle = isSketch ? '#0f172a' : col;
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.9)'; ctx.fill();
+            ctx.strokeStyle = isSketch ? '#0f172a' : col; ctx.lineWidth = 2; ctx.stroke();
             ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(lbl, bx + (tw + 30) / 2, by + 24);
           }
         }
@@ -311,70 +289,48 @@ export function buildRendererHtml(rootDir) {
           ctx.font = '700 32px "Prompt"';
           const bw = ctx.measureText(rt.badge).width + 44;
           drawRoundRect(ctx, midPt.x - bw / 2, badgeY - 30, bw, 58, 29);
-          ctx.fillStyle = isSketch ? '#e2e8f0' : (rt.badgeColor || '#ff3b6b');
-          ctx.fill();
+          ctx.fillStyle = isSketch ? '#e2e8f0' : (rt.badgeColor || '#ff3b6b'); ctx.fill();
           if (isSketch) { ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.stroke(); }
           ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText(rt.badge, midPt.x, badgeY + 1);
         }
       }
 
-      // Single focus markers (for 'locate' recipe)
-      const markers = scene.params?.markers || [];
-      for (const mk of markers) {
+      for (const mk of scene.params?.markers || []) {
         const pt = projectLonLat(mk.lon, mk.lat, cam.camLon, cam.camLat, cam.zoom, W, H);
         const pulse = (Math.sin(t * Math.PI * 3.5) + 1) * 0.5;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 26 + pulse * 30, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 26 + pulse * 30, 0, Math.PI * 2);
         ctx.strokeStyle = isSketch ? '#334155' : 'rgba(255, 209, 102, 0.8)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
+        ctx.lineWidth = 4; ctx.stroke();
         ctx.fillStyle = isSketch ? '#0f172a' : '#ff3b6b';
         ctx.beginPath(); ctx.arc(pt.x, pt.y, 16, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5; ctx.stroke();
-
         if (mk.label) {
           ctx.font = '700 34px "Prompt"';
           const tw = ctx.measureText(mk.label).width;
           drawRoundRect(ctx, pt.x - (tw + 36) / 2, pt.y - 78, tw + 36, 52, 12);
-          ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.92)';
-          ctx.fill();
-          ctx.strokeStyle = isSketch ? '#0f172a' : '#ffd166';
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
+          ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.92)'; ctx.fill();
+          ctx.strokeStyle = isSketch ? '#0f172a' : '#ffd166'; ctx.lineWidth = 2.5; ctx.stroke();
           ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText(mk.label, pt.x, pt.y - 51);
         }
       }
 
-      // Compare Cards (for 'compare' recipe)
       const cards = scene.params?.compareCards || [];
       if (cards.length > 0) {
-        const cardW = 410;
-        const gap = 36;
-        const totalW = cards.length * cardW + (cards.length - 1) * gap;
-        const startX = (W - totalW) / 2;
+        const cardW = 410, gap = 36;
+        const startX = (W - (cards.length * cardW + (cards.length - 1) * gap)) / 2;
         const cardY = 1040;
         cards.forEach((card, idx) => {
           const x = startX + idx * (cardW + gap);
           drawRoundRect(ctx, x, cardY, cardW, 210, 20);
-          ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.9)';
-          ctx.fill();
-          ctx.strokeStyle = isSketch ? '#0f172a' : (card.color || '#38bdf8');
-          ctx.lineWidth = 3.5;
-          ctx.stroke();
-
+          ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.9)'; ctx.fill();
+          ctx.strokeStyle = isSketch ? '#0f172a' : (card.color || '#38bdf8'); ctx.lineWidth = 3.5; ctx.stroke();
           ctx.fillStyle = isSketch ? '#334155' : '#94a3b8';
-          ctx.font = '600 32px "Noto Sans Thai"';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          ctx.font = '600 32px "Noto Sans Thai"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText(card.title, x + cardW / 2, cardY + 58);
-
           ctx.fillStyle = isSketch ? '#0f172a' : (card.color || '#ffd166');
           ctx.font = '700 46px "Prompt"';
           ctx.fillText(card.value, x + cardW / 2, cardY + 138);
@@ -382,11 +338,13 @@ export function buildRendererHtml(rootDir) {
       }
     }
 
-    function drawWordHighlightCaption(ctx, activeCap, t, isSketch) {
-      drawRoundRect(ctx, 100, 1340, 880, 140, 22);
+    function drawWordHighlightCaption(ctx, activeCap, t, isSketch, boxY = 1340) {
+      const boxH = 140;
+      const borderCol = activeCap.speaker === 'B' ? '#fb7185' : 'rgba(56, 189, 248, 0.5)';
+      drawRoundRect(ctx, 100, boxY, 880, boxH, 22);
       ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(7, 13, 31, 0.88)';
       ctx.fill();
-      ctx.strokeStyle = isSketch ? '#dc2626' : 'rgba(56, 189, 248, 0.5)';
+      ctx.strokeStyle = isSketch ? '#dc2626' : borderCol;
       ctx.lineWidth = 3;
       ctx.stroke();
 
@@ -395,16 +353,32 @@ export function buildRendererHtml(rootDir) {
         ctx.font = '700 38px "Noto Sans Thai"';
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'left';
-        const totalW = words.reduce((acc, w) => acc + ctx.measureText(w.text).width, 0);
-        let curX = 540 - totalW / 2;
+        const maxRowW = 810;
+        const rows = [[]];
+        let rowW = 0;
         for (const w of words) {
-          const isActive = t >= w.startSec && t <= w.endSec;
-          ctx.fillStyle = isSketch
-            ? (isActive ? '#dc2626' : '#0f172a')
-            : (isActive ? '#ffd166' : '#f8fafc');
-          ctx.fillText(w.text, curX, 1410);
-          curX += ctx.measureText(w.text).width;
+          const ww = ctx.measureText(w.text).width;
+          if (rows[rows.length - 1].length > 0 && rowW + ww > maxRowW && rows.length < 2) {
+            rows.push([w]);
+            rowW = ww;
+          } else {
+            rows[rows.length - 1].push(w);
+            rowW += ww;
+          }
         }
+        rows.forEach((row, rIdx) => {
+          const rw = row.reduce((acc, w) => acc + ctx.measureText(w.text).width, 0);
+          let curX = 540 - rw / 2;
+          const ry = rows.length === 1 ? boxY + 70 : (boxY + 46 + rIdx * 50);
+          for (const w of row) {
+            const isActive = t >= w.startSec && t <= w.endSec;
+            ctx.fillStyle = isSketch
+              ? (isActive ? '#dc2626' : '#0f172a')
+              : (isActive ? '#ffd166' : '#f8fafc');
+            ctx.fillText(w.text, curX, ry);
+            curX += ctx.measureText(w.text).width;
+          }
+        });
       } else {
         ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
         ctx.font = '700 38px "Noto Sans Thai"';
@@ -412,13 +386,20 @@ export function buildRendererHtml(rootDir) {
         ctx.textBaseline = 'middle';
         const capLines = wrapThaiLines(ctx, activeCap.text, 820, 2);
         if (capLines.length === 1) {
-          ctx.fillText(capLines[0], 540, 1410);
+          ctx.fillText(capLines[0], 540, boxY + 70);
         } else {
-          ctx.fillText(capLines[0], 540, 1384);
-          ctx.fillText(capLines[1], 540, 1436);
+          ctx.fillText(capLines[0], 540, boxY + 45);
+          ctx.fillText(capLines[1], 540, boxY + 95);
         }
       }
     }
+
+    ${getMascotRigScript()}
+    ${getStickmanRigScript()}
+    ${getMysteryFxScript()}
+    ${getMascotStyleScript()}
+    ${getStickmanStyleScript()}
+    ${getMysteryStyleScript()}
 
     window.renderTimelineFrame = async (timeline, frameIndex, mode = 'final') => {
       const fontStatus = await ensureFonts();
@@ -432,101 +413,113 @@ export function buildRendererHtml(rootDir) {
       const H = timeline.height;
       const t = frameIndex / timeline.fps;
       const isSketch = mode === 'sketch';
+      const styleId = timeline.buildIdentity?.styleId || 'wonlok-plus';
 
       const scene = timeline.scenes.find((s) => frameIndex >= s.startFrame && frameIndex < s.endFrame)
         || timeline.scenes[timeline.scenes.length - 1];
       const sceneDurFrames = Math.max(1, scene.endFrame - scene.startFrame);
       const p = clamp((frameIndex - scene.startFrame) / sceneDurFrames, 0, 1);
 
-      // Layer 1: Background
-      if (isSketch) {
-        ctx.fillStyle = '#f4f6f9';
-        ctx.fillRect(0, 0, W, H);
+      let captionBoxY = 1340;
+      if (styleId === 'liplnwza-mascot') {
+        renderMascotScene(ctx, timeline, scene, p, t, W, H, isSketch);
+        captionBoxY = 1090;
+      } else if (styleId === 'stickman-duo') {
+        renderStickmanDuoScene(ctx, timeline, scene, p, t, W, H, isSketch);
+        captionBoxY = 1365;
+      } else if (styleId === 'mystery-stage') {
+        renderMysteryStageScene(ctx, timeline, scene, p, t, W, H, isSketch);
+        captionBoxY = 1340;
       } else {
-        const bg = ctx.createLinearGradient(0, 0, 0, H);
-        bg.addColorStop(0, '#060c1a');
-        bg.addColorStop(0.55, '#0b1730');
-        bg.addColorStop(1, '#060b18');
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, W, H);
+        // wonlok-plus & pilot-map-route
+        if (isSketch) {
+          ctx.fillStyle = '#f4f6f9';
+          ctx.fillRect(0, 0, W, H);
+        } else {
+          const bg = ctx.createLinearGradient(0, 0, 0, H);
+          bg.addColorStop(0, '#060c1a');
+          bg.addColorStop(0.55, '#0b1730');
+          bg.addColorStop(1, '#060b18');
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        const isWonlokRecipe = ['locate', 'trace-route', 'compare'].includes(scene.recipe);
+        if (isWonlokRecipe) {
+          const cam = drawGeoBaseAndHighlight(ctx, scene, p, W, H, isSketch);
+          drawWonlokRoutesAndMarkers(ctx, scene, cam, p, t, W, H, isSketch);
+        } else {
+          ctx.save();
+          ctx.strokeStyle = isSketch ? 'rgba(100, 116, 139, 0.25)' : 'rgba(56, 189, 248, 0.08)';
+          ctx.lineWidth = 1.5;
+          for (let x = 0; x <= W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+          for (let y = 0; y <= H; y += 90) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+          const rng = mulberry32(timeline.seed + (scene.sceneId === 'scene-2' ? 99 : 0));
+          ctx.fillStyle = isSketch ? 'rgba(148, 163, 184, 0.16)' : 'rgba(30, 58, 138, 0.28)';
+          ctx.strokeStyle = isSketch ? 'rgba(71, 85, 105, 0.4)' : 'rgba(56, 189, 248, 0.22)';
+          ctx.lineWidth = 2;
+          for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.ellipse(180 + rng() * 720, 520 + rng() * 720, 120 + rng() * 180, 80 + rng() * 140, rng() * Math.PI, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+          }
+          const p0 = { x: 250, y: 1180 }, p1 = { x: 340, y: 880 }, p2 = { x: 700, y: 940 }, p3 = { x: 820, y: 650 };
+          if (scene.recipe === 'zoom-destination') {
+            const zoom = 1 + 0.28 * easeOutCubic(p);
+            ctx.translate(p3.x, p3.y); ctx.scale(zoom, zoom); ctx.translate(-p3.x, -p3.y);
+          }
+          ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+          ctx.strokeStyle = isSketch ? '#94a3b8' : 'rgba(148, 163, 184, 0.35)';
+          ctx.lineWidth = 10; ctx.setLineDash([16, 12]); ctx.stroke(); ctx.setLineDash([]);
+          const routeProgress = scene.recipe === 'overview-route' ? easeOutCubic(clamp(p * 1.25, 0, 1)) : 1;
+          const maxStep = Math.max(1, Math.floor(48 * routeProgress));
+          ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
+          let head = p0;
+          for (let i = 1; i <= maxStep; i++) {
+            const pt = cubicBezierPoint(p0, p1, p2, p3, i / 48);
+            ctx.lineTo(pt.x, pt.y); head = pt;
+          }
+          if (!isSketch) { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 22; }
+          ctx.strokeStyle = isSketch ? '#0f172a' : '#00e5ff'; ctx.lineWidth = 10; ctx.stroke(); ctx.shadowBlur = 0;
+          const pulse = (Math.sin(t * Math.PI * 3) + 1) * 0.5;
+          const targetPt = scene.recipe === 'zoom-destination' ? p3 : head;
+          ctx.beginPath(); ctx.arc(targetPt.x, targetPt.y, 24 + pulse * 26, 0, Math.PI * 2);
+          ctx.strokeStyle = isSketch ? '#334155' : 'rgba(255, 59, 107, 0.65)'; ctx.lineWidth = 4; ctx.stroke();
+          for (const pin of [{ pt: p0, label: 'กรุงเทพฯ', color: '#38bdf8' }, { pt: p3, label: 'นครราชสีมา', color: '#ff3b6b' }]) {
+            ctx.fillStyle = isSketch ? '#1e293b' : pin.color;
+            ctx.beginPath(); ctx.arc(pin.pt.x, pin.pt.y, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.stroke();
+            ctx.font = '700 34px "Prompt"';
+            const tw = ctx.measureText(pin.label).width;
+            const bx = pin.pt.x - (tw + 36) / 2, by = pin.pt.y - 76;
+            drawRoundRect(ctx, bx, by, tw + 36, 52, 12);
+            ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.88)'; ctx.fill();
+            ctx.strokeStyle = isSketch ? '#0f172a' : pin.color; ctx.lineWidth = 2.5; ctx.stroke();
+            ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(pin.label, pin.pt.x, by + 27);
+          }
+          const badgeText = scene.params?.distanceBadge || scene.params?.highlightMetric || '';
+          if (badgeText) {
+            ctx.font = '700 38px "Prompt"';
+            const bw = ctx.measureText(badgeText).width + 52;
+            drawRoundRect(ctx, 540 - bw / 2, 826, bw, 68, 34);
+            ctx.fillStyle = isSketch ? '#e2e8f0' : '#ff3b6b'; ctx.fill();
+            if (isSketch) { ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(badgeText, 540, 862);
+          }
+          ctx.restore();
+        }
       }
 
-      const isWonlokRecipe = ['locate', 'trace-route', 'compare'].includes(scene.recipe);
-      if (isWonlokRecipe) {
-        const cam = drawGeoBaseAndHighlight(ctx, scene, p, W, H, isSketch);
-        drawWonlokRoutesAndMarkers(ctx, scene, cam, p, t, W, H, isSketch);
-      } else {
-        // Legacy Phase 0B fallback (pilot-map-route)
-        ctx.save();
-        ctx.strokeStyle = isSketch ? 'rgba(100, 116, 139, 0.25)' : 'rgba(56, 189, 248, 0.08)';
-        ctx.lineWidth = 1.5;
-        for (let x = 0; x <= W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-        for (let y = 0; y <= H; y += 90) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-        const rng = mulberry32(timeline.seed + (scene.sceneId === 'scene-2' ? 99 : 0));
-        ctx.fillStyle = isSketch ? 'rgba(148, 163, 184, 0.16)' : 'rgba(30, 58, 138, 0.28)';
-        ctx.strokeStyle = isSketch ? 'rgba(71, 85, 105, 0.4)' : 'rgba(56, 189, 248, 0.22)';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 4; i++) {
-          ctx.beginPath();
-          ctx.ellipse(180 + rng() * 720, 520 + rng() * 720, 120 + rng() * 180, 80 + rng() * 140, rng() * Math.PI, 0, Math.PI * 2);
-          ctx.fill(); ctx.stroke();
-        }
-        const p0 = { x: 250, y: 1180 }, p1 = { x: 340, y: 880 }, p2 = { x: 700, y: 940 }, p3 = { x: 820, y: 650 };
-        if (scene.recipe === 'zoom-destination') {
-          const zoom = 1 + 0.28 * easeOutCubic(p);
-          ctx.translate(p3.x, p3.y); ctx.scale(zoom, zoom); ctx.translate(-p3.x, -p3.y);
-        }
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-        ctx.strokeStyle = isSketch ? '#94a3b8' : 'rgba(148, 163, 184, 0.35)';
-        ctx.lineWidth = 10; ctx.setLineDash([16, 12]); ctx.stroke(); ctx.setLineDash([]);
-        const routeProgress = scene.recipe === 'overview-route' ? easeOutCubic(clamp(p * 1.25, 0, 1)) : 1;
-        const maxStep = Math.max(1, Math.floor(48 * routeProgress));
-        ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
-        let head = p0;
-        for (let i = 1; i <= maxStep; i++) {
-          const pt = cubicBezierPoint(p0, p1, p2, p3, i / 48);
-          ctx.lineTo(pt.x, pt.y); head = pt;
-        }
-        if (!isSketch) { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 22; }
-        ctx.strokeStyle = isSketch ? '#0f172a' : '#00e5ff'; ctx.lineWidth = 10; ctx.stroke(); ctx.shadowBlur = 0;
-        const pulse = (Math.sin(t * Math.PI * 3) + 1) * 0.5;
-        const targetPt = scene.recipe === 'zoom-destination' ? p3 : head;
-        ctx.beginPath(); ctx.arc(targetPt.x, targetPt.y, 24 + pulse * 26, 0, Math.PI * 2);
-        ctx.strokeStyle = isSketch ? '#334155' : 'rgba(255, 59, 107, 0.65)'; ctx.lineWidth = 4; ctx.stroke();
-        for (const pin of [{ pt: p0, label: 'กรุงเทพฯ', color: '#38bdf8' }, { pt: p3, label: 'นครราชสีมา', color: '#ff3b6b' }]) {
-          ctx.fillStyle = isSketch ? '#1e293b' : pin.color;
-          ctx.beginPath(); ctx.arc(pin.pt.x, pin.pt.y, 18, 0, Math.PI * 2); ctx.fill();
-          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.stroke();
-          ctx.font = '700 34px "Prompt"';
-          const tw = ctx.measureText(pin.label).width;
-          const bx = pin.pt.x - (tw + 36) / 2, by = pin.pt.y - 76;
-          drawRoundRect(ctx, bx, by, tw + 36, 52, 12);
-          ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.88)'; ctx.fill();
-          ctx.strokeStyle = isSketch ? '#0f172a' : pin.color; ctx.lineWidth = 2.5; ctx.stroke();
-          ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(pin.label, pin.pt.x, by + 27);
-        }
-        const badgeText = scene.params?.distanceBadge || scene.params?.highlightMetric || '';
-        if (badgeText) {
-          ctx.font = '700 38px "Prompt"';
-          const bw = ctx.measureText(badgeText).width + 52;
-          drawRoundRect(ctx, 540 - bw / 2, 826, bw, 68, 34);
-          ctx.fillStyle = isSketch ? '#e2e8f0' : '#ff3b6b'; ctx.fill();
-          if (isSketch) { ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.stroke(); }
-          ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(badgeText, 540, 862);
-        }
-        ctx.restore();
-      }
-
-      // Top readability gradient backdrop for Layer 4 Headline
-      if (!isSketch) {
-        const topGrad = ctx.createLinearGradient(0, 0, 0, 520);
-        topGrad.addColorStop(0, 'rgba(6, 12, 26, 0.92)');
-        topGrad.addColorStop(0.7, 'rgba(6, 12, 26, 0.65)');
+      // Top readability gradient backdrop for Headline
+      if (!isSketch && styleId !== 'mystery-stage') {
+        const topGrad = ctx.createLinearGradient(0, 0, 0, 500);
+        topGrad.addColorStop(0, 'rgba(6, 12, 26, 0.88)');
+        topGrad.addColorStop(0.7, 'rgba(6, 12, 26, 0.55)');
         topGrad.addColorStop(1, 'rgba(6, 12, 26, 0)');
         ctx.fillStyle = topGrad;
-        ctx.fillRect(0, 0, W, 520);
+        ctx.fillRect(0, 0, W, 500);
       }
 
       // Safe Area Guide (Sketch only)
@@ -534,14 +527,14 @@ export function buildRendererHtml(rootDir) {
         ctx.strokeStyle = '#2563eb';
         ctx.lineWidth = 3;
         ctx.setLineDash([12, 8]);
-        ctx.strokeRect(80, 220, 920, 1320);
+        ctx.strokeRect(80, 220, 920, 1560);
         ctx.setLineDash([]);
         ctx.strokeStyle = '#64748b';
         ctx.lineWidth = 2;
         ctx.strokeRect(100, 250, 880, 195);
       }
 
-      // Layer 4: 2-Line Thai Headline + Subheadline
+      // Layer: 2-Line Thai Headline + Subheadline
       const headline = scene.headline || '';
       const subheadline = scene.params?.subheadline || '';
       ctx.textAlign = 'center';
@@ -561,18 +554,18 @@ export function buildRendererHtml(rootDir) {
         ctx.fillText(subLines[0] || '', 540, subY);
       }
 
-      // Layer 5: Phrase / Word-Highlight Captions
+      // Layer: Phrase / Word-Highlight Captions
       const activeCap = (scene.captions || []).find((c) => t >= c.startSec && t <= c.endSec);
       if (isSketch) {
         ctx.strokeStyle = '#dc2626';
         ctx.lineWidth = 2.5;
-        ctx.strokeRect(100, 1340, 880, 140);
+        ctx.strokeRect(100, captionBoxY, 880, 140);
       }
       if (activeCap) {
-        drawWordHighlightCaption(ctx, activeCap, t, isSketch);
+        drawWordHighlightCaption(ctx, activeCap, t, isSketch, captionBoxY);
       }
 
-      // Global Overlay: Persistent Brand Badge (top-right inside safe area)
+      // Global Overlay: Persistent Brand Badge
       const brandText = timeline.brandBadge || 'GenhaLipza';
       ctx.font = '700 26px "Prompt"';
       const brandW = ctx.measureText(brandText).width + 36;
@@ -592,11 +585,11 @@ export function buildRendererHtml(rootDir) {
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(0, 0, W, 90);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '700 30px "Prompt"';
+        ctx.font = '700 28px "Prompt"';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(
-          'GATE 3 SKETCH | ' + scene.sceneId + ' (' + scene.recipe + ') | t=' + t.toFixed(2) + 's | rev ' + timeline.revision,
+          'GATE 3 SKETCH | ' + styleId + ' | ' + scene.sceneId + ' (' + scene.recipe + ') | rev ' + timeline.revision,
           40,
           45
         );

@@ -1,0 +1,66 @@
+{
+  "totalDurationSec": 15.0,
+  "scenes": [
+    {
+      "sceneId": "scene-1",
+      "recipe": "duo-intro",
+      "startSec": 0.0,
+      "endSec": 5.0,
+      "headline": "ทำไมดื่มกาแฟแล้วหายง่วง?",
+      "subheadline": "บทสนทนาเข้าใจง่ายใน 15 วินาที",
+      "params": {
+        "speakerAName": "พี่ลิป",
+        "speakerBName": "น้องซ่า",
+        "defaultSpeaker": "B",
+        "boardTitle": "กลไกความง่วงในสมอง",
+        "boardPoints": [
+          "สารอะดีโนซีนสะสมตลอดวันทำให้เราเริ่มง่วง",
+          "คาเฟอีนเข้าไปสวมรอยบล็อกตัวรับชั่วคราว"
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-2",
+      "recipe": "duo-debate",
+      "startSec": 5.0,
+      "endSec": 10.0,
+      "headline": "บล็อกความง่วง ไม่ใช่เพิ่มพลังงาน",
+      "subheadline": "ถ้ายาหมดฤทธิ์ อาจง่วงสะสมหนักกว่าเดิม",
+      "params": {
+        "speakerAName": "พี่ลิป",
+        "speakerBName": "น้องซ่า",
+        "defaultSpeaker": "A",
+        "boardTitle": "ระวังอาการ Caffeine Crash",
+        "boardPoints": [
+          "เมื่อคาเฟอีนสลายตัว สารง่วงจะกรูเข้าจับตัวรับพร้อมกัน",
+          "หลีกเลี่ยงกาแฟอย่างน้อย 6–8 ชม. ก่อนนอน"
+        ]
+      }
+    },
+    {
+      "sceneId": "scene-3",
+      "recipe": "duo-takeaway",
+      "startSec": 10.0,
+      "endSec": 15.0,
+      "headline": "ดื่มพอดี ชีวิตมีพลังกว่าเดิม",
+      "subheadline": "ไม่เกิน 1–2 แก้วต่อวัน & ดื่มน้ำตาม",
+      "params": {
+        "speakerAName": "พี่ลิป",
+        "speakerBName": "น้องซ่า",
+        "defaultSpeaker": "A",
+        "boardTitle": "กติกาจิบกาแฟแบบสมดุล",
+        "boardPoints": [
+          "จำกัดไม่เกิน ~400 มก. คาเฟอีนต่อวัน",
+          "เว้นช่วงหลังบ่าย 2 โมง เพื่อการหลับลึก"
+        ]
+      }
+    }
+  ],
+  "captions": [
+    { "speaker": "B", "expression": "surprised", "gesture": "point", "text": "พี่ลิปครับ ทำไมจิบกาแฟปุ๊บแล้วตาตื่นเลยล่ะ?", "startSec": 0.3, "endSec": 2.5 },
+    { "speaker": "A", "expression": "explain", "gesture": "explain", "text": "เพราะคาเฟอีนเข้าไปปิดประตูไม่ให้สารง่วงเข้าสมองครับ", "startSec": 2.7, "endSec": 4.9 },
+    { "speaker": "B", "expression": "neutral", "gesture": "think", "text": "อ้าว แล้วถ้าดื่มตอนเย็นหรือมากไปล่ะครับ?", "startSec": 5.2, "endSec": 7.4 },
+    { "speaker": "A", "expression": "explain", "gesture": "point", "text": "พอหมดฤทธิ์จะง่วงตีกลับ และทำให้นอนหลับไม่สนิทครับ", "startSec": 7.6, "endSec": 9.8 },
+    { "speaker": "A", "expression": "agree", "gesture": "excited", "text": "จำง่ายๆ แค่ 1–2 แก้วก่อนบ่ายสองก็พอครับ!", "startSec": 10.2, "endSec": 14.6 }
+  ]
+}

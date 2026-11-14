@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "jobId": "mvp-stickman-15s",
+  "title": "ทำไมกาแฟถึงช่วยให้ตื่น แต่ดื่มมากไปไม่ดี? (Stickman Duo 15s)",
+  "revision": 1,
+  "styleId": "stickman-duo",
+  "aspect": "9:16",
+  "fps": 30,
+  "seed": 6201,
+  "audio": {
+    "mode": "audio-in",
+    "sourcePath": "jobs/mvp-stickman-15s/voice_fixture.wav",
+    "cuesPath": "assets/fixtures/mvp-stickman/cues.json",
+    "targetLufs": -16.0,
+    "maxTruePeakDbtp": -1.0
+  }
+}

@@ -14,6 +14,8 @@ import {
   sha256Json,
   writeJsonAtomic,
 } from '../engine/state-manager.mjs';
+import { generateVisemeTrack } from '../audio/thai_visemes.mjs';
+import { generateStyleAudioFixture } from '../audio/audio_prep.mjs';
 import { runPostRenderQc } from '../qa/qc.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -49,29 +51,47 @@ function formatSrtTime(sec) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(r).padStart(3, '0')}`;
 }
 
-function generateFixtureAudio(outWavPath, durationSec = 10.0) {
-  execFileSync('ffmpeg', [
-    '-y',
-    '-f', 'lavfi',
-    '-i', `sine=frequency=330:duration=${durationSec}:sample_rate=48000`,
-    '-f', 'lavfi',
-    '-i', `sine=frequency=495:duration=${durationSec}:sample_rate=48000`,
-    '-filter_complex',
-    `[0:a][1:a]amix=inputs=2:weights=0.7 0.3,volume=-18dB,afade=t=in:st=0:d=0.15,afade=t=out:st=${Math.max(0, durationSec - 0.3).toFixed(2)}:d=0.3`,
-    '-c:a', 'pcm_s16le',
-    outWavPath,
-  ], { stdio: 'ignore' });
-}
-
 function buildSrt(timeline) {
+  const seen = new Set();
   const allCaps = [];
   for (const s of timeline.scenes) {
-    for (const c of s.captions || []) allCaps.push(c);
+    for (const c of s.captions || []) {
+      const key = `${c.startSec}|${c.endSec}|${c.text}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      allCaps.push(c);
+    }
   }
   allCaps.sort((a, b) => a.startSec - b.startSec);
   return allCaps
     .map((c, idx) => `${idx + 1}\n${formatSrtTime(c.startSec)} --> ${formatSrtTime(c.endSec)}\n${c.text}\n`)
     .join('\n');
+}
+
+function loadPrivateMascotAssets(privateDir) {
+  if (!privateDir || !fs.existsSync(privateDir)) return null;
+  const resolved = path.resolve(privateDir);
+  const result = { poses: {}, mouths: {} };
+
+  const readPngGroup = (subDir, targetObj) => {
+    const dir = path.join(resolved, subDir);
+    if (!fs.existsSync(dir)) return;
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.endsWith('.png')) continue;
+      const key = path.basename(file, '.png');
+      const fullPath = path.resolve(dir, file);
+      if (!fullPath.startsWith(resolved + path.sep)) continue;
+      const b64 = fs.readFileSync(fullPath).toString('base64');
+      targetObj[key] = `data:image/png;base64,${b64}`;
+    }
+  };
+
+  readPngGroup('poses', result.poses);
+  readPngGroup('mouth_rig', result.mouths);
+  if (Object.keys(result.poses).length === 0 && Object.keys(result.mouths).length === 0) {
+    return null;
+  }
+  return result;
 }
 
 function parseArgs(argv) {
@@ -110,7 +130,7 @@ try {
   fs.mkdirSync(g4Dir, { recursive: true });
   fs.mkdirSync(framesDir, { recursive: true });
 
-  console.log(`=== GenhaLipza Pipeline — Job: ${job.jobId} (rev ${job.revision || 1}) ===\n`);
+  console.log(`=== GenhaLipza Pipeline — Job: ${job.jobId} [${job.styleId}] (rev ${job.revision || 1}) ===\n`);
 
   // Gate 1: Brief & Facts
   const factsSrc = path.join(path.dirname(jobJsonPath), 'facts.md');
@@ -128,10 +148,21 @@ try {
   if (!fs.existsSync(audioPath)) {
     audioPath = path.join(jobDir, 'voice_fixture.wav');
     if (!fs.existsSync(audioPath)) {
-      generateFixtureAudio(audioPath, cues.totalDurationSec || 10.0);
-      console.log(`ℹ️ Generated deterministic 10s fixture audio: ${path.relative(ROOT, audioPath)}`);
+      generateStyleAudioFixture({
+        outWavPath: audioPath,
+        durationSec: cues.totalDurationSec || 10.0,
+        styleId: job.styleId,
+        captions: cues.captions || [],
+      });
+      console.log(`ℹ️ Generated deterministic ${cues.totalDurationSec || 10}s fixture audio: ${path.relative(ROOT, audioPath)}`);
     }
   }
+
+  const allVisemes = Array.isArray(cues.visemes)
+    ? cues.visemes
+    : (['liplnwza-mascot', 'stickman-duo'].includes(job.styleId)
+      ? generateVisemeTrack(cues.captions || [])
+      : []);
 
   const dimensions = job.aspect === '9:16' ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
   const totalFrames = Math.round((cues.totalDurationSec || 10.0) * job.fps);
@@ -141,6 +172,9 @@ try {
     const endFrame = Math.round(s.endSec * job.fps);
     const sceneCaptions = (cues.captions || []).filter(
       (c) => c.endSec > s.startSec && c.startSec < s.endSec
+    );
+    const sceneVisemes = allVisemes.filter(
+      (v) => v.endSec > s.startSec && v.startSec < s.endSec
     );
     return {
       sceneId: s.sceneId,
@@ -152,11 +186,17 @@ try {
       params: {
         ...(s.params || {}),
         subheadline: s.subheadline || '',
+        ...(sceneVisemes.length > 0 ? { visemes: sceneVisemes } : {}),
       },
     };
   });
 
-  const inputHash = sha256Json({ job, cues, audioHash: sha256File(audioPath) });
+  const privateDir = job.privateAssetsDir || process.env.GENHALIPZA_PRIVATE_ASSETS || null;
+  const privateMascotAssets = job.styleId === 'liplnwza-mascot' ? loadPrivateMascotAssets(privateDir) : null;
+
+  const html = buildRendererHtml(ROOT);
+  const rendererHash = sha256Json({ html });
+  const inputHash = sha256Json({ job, cues, audioHash: sha256File(audioPath), hasPrivateAssets: Boolean(privateMascotAssets), rendererHash });
   const timeline = {
     schemaVersion: 1,
     jobId: job.jobId,
@@ -167,8 +207,10 @@ try {
     fps: job.fps,
     totalFrames,
     seed: job.seed,
+    brandBadge: 'GenhaLipza',
     buildIdentity: {
-      engineVersion: '0.2.0-phase1',
+      engineVersion: '0.3.0-phase2b',
+      rendererHash,
       styleId: job.styleId,
       styleVersion: '0.1.0',
       inputHash,
@@ -183,8 +225,7 @@ try {
 
   const validateTimeline = loadValidator('timeline.schema.json');
   if (!validateTimeline(timeline)) {
-    console.error('❌ Compiled timeline invalid:', validateTimeline.errors);
-    process.exit(1);
+    throw new Error(`Compiled timeline invalid: ${JSON.stringify(validateTimeline.errors)}`);
   }
   const timelinePath = path.join(jobDir, 'timeline.json');
   writeJsonAtomic(timelinePath, timeline);
@@ -198,11 +239,10 @@ try {
   const frameCachePath = path.join(jobDir, 'frame_cache.json');
   const frameCache = fs.existsSync(frameCachePath) ? JSON.parse(fs.readFileSync(frameCachePath, 'utf8')) : {};
 
-  console.log(`✅ Gate 2 (Compile Timeline): ${totalFrames} frames @ ${job.fps}fps (inputHash=${inputHash})`);
+  console.log(`✅ Gate 2 (Compile Timeline): ${totalFrames} frames @ ${job.fps}fps (visemes=${allVisemes.length}, inputHash=${inputHash})`);
 
   // Launch Chromium once (warm reuse)
   const chromiumPath = findChromium();
-  const html = buildRendererHtml(ROOT);
   const browser = await chromium.launch({
     executablePath: chromiumPath,
     headless: true,
@@ -217,10 +257,17 @@ try {
     const page = await browser.newPage({ viewport: { width: timeline.width, height: timeline.height } });
     await page.setContent(html, { waitUntil: 'load' });
 
-    const geojsonPath = path.join(ROOT, 'assets', 'maps', 'ne_110m_countries.geojson');
-    if (fs.existsSync(geojsonPath)) {
-      const geojson = JSON.parse(fs.readFileSync(geojsonPath, 'utf8'));
-      await page.evaluate((g) => window.setGeoJsonData(g), geojson);
+    if (job.styleId === 'wonlok-plus') {
+      const geojsonPath = path.join(ROOT, 'assets', 'maps', 'ne_110m_countries.geojson');
+      if (fs.existsSync(geojsonPath)) {
+        const geojson = JSON.parse(fs.readFileSync(geojsonPath, 'utf8'));
+        await page.evaluate((g) => window.setGeoJsonData(g), geojson);
+      }
+    }
+
+    if (privateMascotAssets) {
+      await page.evaluate((assets) => window.setMascotAssets(assets), privateMascotAssets);
+      console.log('ℹ️ Loaded private owner mascot clean-plates from external privateAssetsDir');
     }
 
     // Gate 3: Layout Sketch
@@ -300,13 +347,14 @@ try {
     await browser.close();
   }
 
-  // Gate 4 Motion Probe (2.0s around scene transition: frames 120..179)
+  // Gate 4 Motion Probe (2.0s around first scene transition)
   if (!args.skipProbe && totalFrames >= 180) {
+    const probeStart = Math.max(0, Math.min(totalFrames - 60, (timeline.scenes[0]?.endFrame || 150) - 30));
     const probeMp4 = path.join(jobDir, 'gate4_motion_probe.mp4');
     execFileSync('ffmpeg', [
       '-y',
       '-framerate', String(job.fps),
-      '-start_number', '120',
+      '-start_number', String(probeStart),
       '-i', path.join(framesDir, 'frame_%05d.png'),
       '-frames:v', '60',
       '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22',
@@ -402,7 +450,7 @@ try {
 
   if (!qcReport.passed) {
     console.error('\n❌ Automated QC failed!');
-    process.exit(1);
+    process.exitCode = 1;
   }
 } finally {
   releaseLock();

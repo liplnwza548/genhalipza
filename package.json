@@ -9,7 +9,7 @@
     "smoke": "node core/cli/smoke.mjs",
     "validate:schemas": "node core/cli/validate-schemas.mjs",
     "pilot:10s": "node core/cli/pipeline.mjs run --job assets/fixtures/sample-10s/job.json",
-    "test": "node --test tests/phase1.test.mjs"
+    "test": "node --test tests/phase1.test.mjs tests/phase2b.test.mjs"
   },
   "dependencies": {
     "ajv": "^8.17.1",

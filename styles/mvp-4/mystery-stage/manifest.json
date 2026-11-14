@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "mystery-stage",
+  "version": "0.1.0",
+  "archetype": "investigative-atmosphere",
+  "supportedAspects": ["9:16"],
+  "capabilities": [
+    "procedural-fog",
+    "flickering-candlelight",
+    "flashlight-sweep",
+    "evidence-board-red-thread",
+    "procedural-ambient-sfx",
+    "thai-word-highlight-captions"
+  ],
+  "limits": {
+    "maxLabels": 6,
+    "maxCaptionLines": 2
+  },
+  "render": {
+    "fps": 30,
+    "seedRequired": true
+  },
+  "tokens": {
+    "fontFamily": "Prompt",
+    "palette": "noir-crimson-amber"
+  },
+  "recipes": ["evidence-board", "clue-zoom", "case-verdict"],
+  "acceptanceJobs": ["mvp-mystery-15s"]
+}

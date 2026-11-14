@@ -23,6 +23,7 @@ export function computeSceneHashes(timeline) {
     seed: timeline.seed,
     buildIdentity: {
       engineVersion: timeline.buildIdentity?.engineVersion,
+      rendererHash: timeline.buildIdentity?.rendererHash,
       styleId: timeline.buildIdentity?.styleId,
       styleVersion: timeline.buildIdentity?.styleVersion,
       fontHashes: timeline.buildIdentity?.fontHashes,
@@ -57,8 +58,22 @@ export function acquireJobLock(jobDir) {
   fs.mkdirSync(jobDir, { recursive: true });
   const lockPath = path.join(jobDir, '.pipeline.lock');
   if (fs.existsSync(lockPath)) {
-    const pid = fs.readFileSync(lockPath, 'utf8').trim();
-    throw new Error(`Job directory is locked by another process (pid=${pid}): ${lockPath}`);
+    const pid = Number(fs.readFileSync(lockPath, 'utf8').trim());
+    let alive = false;
+    if (Number.isInteger(pid) && pid > 0 && pid !== process.pid) {
+      try {
+        process.kill(pid, 0);
+        alive = true;
+      } catch {
+        alive = false;
+      }
+    } else if (pid === process.pid) {
+      alive = true;
+    }
+    if (alive) {
+      throw new Error(`Job directory is locked by another process (pid=${pid}): ${lockPath}`);
+    }
+    fs.unlinkSync(lockPath);
   }
   fs.writeFileSync(lockPath, String(process.pid));
   return () => {

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "jobId": "mvp-mystery-15s",
+  "title": "ปริศนาเรือแมรี เซเลสต์ — เรือร้างกลางมหาสมุทร (Mystery Stage 15s)",
+  "revision": 1,
+  "styleId": "mystery-stage",
+  "aspect": "9:16",
+  "fps": 30,
+  "seed": 6301,
+  "audio": {
+    "mode": "audio-in",
+    "sourcePath": "jobs/mvp-mystery-15s/voice_fixture.wav",
+    "cuesPath": "assets/fixtures/mvp-mystery/cues.json",
+    "targetLufs": -16.0,
+    "maxTruePeakDbtp": -1.0
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "liplnwza-mascot",
+  "version": "0.1.0",
+  "archetype": "mascot-cutout-stage",
+  "supportedAspects": ["9:16"],
+  "capabilities": [
+    "mascot-6-poses",
+    "viseme-lip-sync",
+    "private-owner-asset-overlay",
+    "paper-cutout-card",
+    "thai-word-highlight-captions"
+  ],
+  "limits": {
+    "maxLabels": 5,
+    "maxCaptionLines": 2
+  },
+  "render": {
+    "fps": 30,
+    "seedRequired": true
+  },
+  "tokens": {
+    "fontFamily": "Prompt",
+    "palette": "mascot-indigo-paper"
+  },
+  "recipes": ["card-explain", "card-compare", "card-summary"],
+  "acceptanceJobs": ["mvp-mascot-15s"]
+}

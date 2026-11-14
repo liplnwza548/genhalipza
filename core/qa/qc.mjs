@@ -3,9 +3,13 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 function checkCaptions(timeline) {
+  const seen = new Set();
   const allCaps = [];
   for (const scene of timeline.scenes) {
     for (const c of scene.captions || []) {
+      const key = `${c.startSec}|${c.endSec}|${c.text}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       allCaps.push({ sceneId: scene.sceneId, ...c });
     }
   }
