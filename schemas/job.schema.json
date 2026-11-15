@@ -24,7 +24,27 @@
         "transcriptPath": { "type": "string" },
         "cuesPath": { "type": "string" },
         "targetLufs": { "type": "number", "default": -16.0 },
-        "maxTruePeakDbtp": { "type": "number", "default": -1.0 }
+        "maxTruePeakDbtp": { "type": "number", "default": -1.0 },
+        "speaker": { "type": "string", "enum": ["male", "female"], "default": "male" },
+        "bgmMood": { "type": "string", "enum": ["none", "calm", "warm", "playful", "dark"], "default": "calm" },
+        "bgmGain": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.14 }
+      }
+    },
+    "captionStyle": {
+      "type": "string",
+      "enum": ["pop-chips", "bold-karaoke", "clean-pill", "cinema-minimal"]
+    },
+    "themeMode": {
+      "type": "string",
+      "enum": ["paper", "dark", "studio", "neon-map"]
+    },
+    "polish": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "grain": { "type": "boolean", "default": true },
+        "bloom": { "type": "boolean", "default": true },
+        "vignette": { "type": "boolean", "default": true }
       }
     },
     "privateAssetsDir": {

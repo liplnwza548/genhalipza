@@ -8,10 +8,19 @@
   "fps": 30,
   "seed": 6101,
   "audio": {
-    "mode": "audio-in",
-    "sourcePath": "jobs/mvp-mascot-15s/voice_fixture.wav",
+    "mode": "tts",
     "cuesPath": "assets/fixtures/mvp-mascot/cues.json",
     "targetLufs": -16.0,
-    "maxTruePeakDbtp": -1.0
+    "maxTruePeakDbtp": -1.0,
+    "speaker": "male",
+    "bgmMood": "playful",
+    "bgmGain": 0.14
+  },
+  "captionStyle": "pop-chips",
+  "themeMode": "paper",
+  "polish": {
+    "grain": true,
+    "bloom": true,
+    "vignette": true
   }
 }

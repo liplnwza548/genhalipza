@@ -32,7 +32,9 @@
             "to": [99.1800, 10.4930],
             "fromLabel": "ระนอง",
             "toLabel": "ชุมพร",
-            "badge": "Landbridge ~90 กม."
+            "badge": "Landbridge ~90 กม.",
+            "totalKm": 90,
+            "totalHours": 1.5
           }
         ]
       }

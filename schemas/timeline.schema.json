@@ -16,6 +16,22 @@
     "totalFrames": { "type": "integer", "minimum": 1 },
     "seed": { "type": "integer", "minimum": 0 },
     "brandBadge": { "type": "string" },
+    "captionStyle": {
+      "type": "string",
+      "enum": ["pop-chips", "bold-karaoke", "clean-pill", "cinema-minimal"]
+    },
+    "themeMode": {
+      "type": "string",
+      "enum": ["paper", "dark", "studio", "neon-map"]
+    },
+    "polish": {
+      "type": "object",
+      "properties": {
+        "grain": { "type": "boolean" },
+        "bloom": { "type": "boolean" },
+        "vignette": { "type": "boolean" }
+      }
+    },
     "buildIdentity": {
       "type": "object",
       "required": ["engineVersion", "styleId", "styleVersion", "inputHash"],

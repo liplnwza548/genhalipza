@@ -6,12 +6,15 @@ import { getMysteryFxScript } from '../atmosphere/mystery-fx.mjs';
 import { getMascotStyleScript } from './styles/liplnwza-mascot.mjs';
 import { getStickmanStyleScript } from './styles/stickman-duo.mjs';
 import { getMysteryStyleScript } from './styles/mystery-stage.mjs';
+import { getWonlokStyleScript } from './styles/wonlok-plus.mjs';
+import { getSubtitlesScript } from './subtitles.mjs';
+import { getPolishScript } from './polish.mjs';
 
 /**
  * Self-contained HTML5 Canvas renderer for Chromium.
- * Dispatches cleanly across all MVP styles:
- *   - pilot-map-route / wonlok-plus (GeoJSON Web Mercator + Neon Routes + Compare)
- *   - liplnwza-mascot (3-Zone Cutout Card + Mascot Rig + Viseme Lip-Sync)
+ * Dispatches cleanly across all MVP styles with multi-style Thai subtitles & MotionForge Polish:
+ *   - pilot-map-route / wonlok-plus (GeoJSON Web Mercator + Neon Routes + Smart Labels + Compare)
+ *   - liplnwza-mascot (AoT Paper / Studio Dark 3-Zone Stage + Cel-Shaded Mascot + Viseme Lip-Sync)
  *   - stickman-duo (Parametric 2-Speaker Stickman Dialogue)
  *   - mystery-stage (Fog + Candle + Flashlight + Evidence Board + Red Thread)
  */
@@ -24,6 +27,10 @@ export function buildRendererHtml(rootDir) {
   const promptReg = toFontDataUri('Prompt-Regular.ttf');
   const promptBold = toFontDataUri('Prompt-Bold.ttf');
   const notoThai = toFontDataUri('NotoSansThai.ttf');
+  const kanitReg = toFontDataUri('Kanit-Regular.ttf');
+  const kanitSemi = toFontDataUri('Kanit-SemiBold.ttf');
+  const kanitBold = toFontDataUri('Kanit-Bold.ttf');
+  const kanitExtra = toFontDataUri('Kanit-ExtraBold.ttf');
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -46,6 +53,30 @@ export function buildRendererHtml(rootDir) {
       font-family: 'Noto Sans Thai';
       src: url('${notoThai}') format('truetype');
       font-weight: 100 900;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Kanit';
+      src: url('${kanitReg}') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Kanit';
+      src: url('${kanitSemi}') format('truetype');
+      font-weight: 600;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Kanit';
+      src: url('${kanitBold}') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Kanit';
+      src: url('${kanitExtra}') format('truetype');
+      font-weight: 800;
       font-style: normal;
     }
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
@@ -150,12 +181,22 @@ export function buildRendererHtml(rootDir) {
     function drawPolygonRings(ctx, rings, camLon, camLat, zoom, W, H) {
       for (const ring of rings) {
         if (!ring || ring.length < 2) continue;
-        ctx.beginPath();
+        const pts = [];
+        let wrapsAntimeridian = false;
         for (let i = 0; i < ring.length; i++) {
           const [lon, lat] = ring[i];
           const pt = projectLonLat(lon, lat, camLon, camLat, zoom, W, H);
-          if (i === 0) ctx.moveTo(pt.x, pt.y);
-          else ctx.lineTo(pt.x, pt.y);
+          if (i > 0 && Math.abs(pt.x - pts[i - 1].x) > W * 0.65) {
+            wrapsAntimeridian = true;
+            break;
+          }
+          pts.push(pt);
+        }
+        if (wrapsAntimeridian) continue;
+        ctx.beginPath();
+        for (let i = 0; i < pts.length; i++) {
+          if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+          else ctx.lineTo(pts[i].x, pts[i].y);
         }
         ctx.closePath();
         ctx.fill();
@@ -394,9 +435,12 @@ export function buildRendererHtml(rootDir) {
       }
     }
 
+    ${getSubtitlesScript()}
+    ${getPolishScript()}
     ${getMascotRigScript()}
     ${getStickmanRigScript()}
     ${getMysteryFxScript()}
+    ${getWonlokStyleScript()}
     ${getMascotStyleScript()}
     ${getStickmanStyleScript()}
     ${getMysteryStyleScript()}
@@ -420,18 +464,29 @@ export function buildRendererHtml(rootDir) {
       const sceneDurFrames = Math.max(1, scene.endFrame - scene.startFrame);
       const p = clamp((frameIndex - scene.startFrame) / sceneDurFrames, 0, 1);
 
-      let captionBoxY = 1340;
+      let captionCenterY = 1380;
+      let defaultCapStyle = 'clean-pill';
+      let isDarkStage = true;
+
       if (styleId === 'liplnwza-mascot') {
         renderMascotScene(ctx, timeline, scene, p, t, W, H, isSketch);
-        captionBoxY = 1090;
+        captionCenterY = 1095;
+        defaultCapStyle = 'pop-chips';
+        isDarkStage = timeline.themeMode === 'dark' || timeline.themeMode === 'studio';
       } else if (styleId === 'stickman-duo') {
         renderStickmanDuoScene(ctx, timeline, scene, p, t, W, H, isSketch);
-        captionBoxY = 1365;
+        captionCenterY = 1435;
+        defaultCapStyle = 'clean-pill';
       } else if (styleId === 'mystery-stage') {
         renderMysteryStageScene(ctx, timeline, scene, p, t, W, H, isSketch);
-        captionBoxY = 1340;
+        captionCenterY = 1410;
+        defaultCapStyle = 'cinema-minimal';
+      } else if (['locate', 'trace-route', 'compare'].includes(scene.recipe)) {
+        renderWonlokPlusScene(ctx, timeline, scene, p, t, W, H, isSketch);
+        captionCenterY = 1385;
+        defaultCapStyle = 'bold-karaoke';
       } else {
-        // wonlok-plus & pilot-map-route
+        // pilot-map-route simple fallback
         if (isSketch) {
           ctx.fillStyle = '#f4f6f9';
           ctx.fillRect(0, 0, W, H);
@@ -444,76 +499,70 @@ export function buildRendererHtml(rootDir) {
           ctx.fillRect(0, 0, W, H);
         }
 
-        const isWonlokRecipe = ['locate', 'trace-route', 'compare'].includes(scene.recipe);
-        if (isWonlokRecipe) {
-          const cam = drawGeoBaseAndHighlight(ctx, scene, p, W, H, isSketch);
-          drawWonlokRoutesAndMarkers(ctx, scene, cam, p, t, W, H, isSketch);
-        } else {
-          ctx.save();
-          ctx.strokeStyle = isSketch ? 'rgba(100, 116, 139, 0.25)' : 'rgba(56, 189, 248, 0.08)';
-          ctx.lineWidth = 1.5;
-          for (let x = 0; x <= W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-          for (let y = 0; y <= H; y += 90) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-          const rng = mulberry32(timeline.seed + (scene.sceneId === 'scene-2' ? 99 : 0));
-          ctx.fillStyle = isSketch ? 'rgba(148, 163, 184, 0.16)' : 'rgba(30, 58, 138, 0.28)';
-          ctx.strokeStyle = isSketch ? 'rgba(71, 85, 105, 0.4)' : 'rgba(56, 189, 248, 0.22)';
-          ctx.lineWidth = 2;
-          for (let i = 0; i < 4; i++) {
-            ctx.beginPath();
-            ctx.ellipse(180 + rng() * 720, 520 + rng() * 720, 120 + rng() * 180, 80 + rng() * 140, rng() * Math.PI, 0, Math.PI * 2);
-            ctx.fill(); ctx.stroke();
-          }
-          const p0 = { x: 250, y: 1180 }, p1 = { x: 340, y: 880 }, p2 = { x: 700, y: 940 }, p3 = { x: 820, y: 650 };
-          if (scene.recipe === 'zoom-destination') {
-            const zoom = 1 + 0.28 * easeOutCubic(p);
-            ctx.translate(p3.x, p3.y); ctx.scale(zoom, zoom); ctx.translate(-p3.x, -p3.y);
-          }
-          ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-          ctx.strokeStyle = isSketch ? '#94a3b8' : 'rgba(148, 163, 184, 0.35)';
-          ctx.lineWidth = 10; ctx.setLineDash([16, 12]); ctx.stroke(); ctx.setLineDash([]);
-          const routeProgress = scene.recipe === 'overview-route' ? easeOutCubic(clamp(p * 1.25, 0, 1)) : 1;
-          const maxStep = Math.max(1, Math.floor(48 * routeProgress));
-          ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
-          let head = p0;
-          for (let i = 1; i <= maxStep; i++) {
-            const pt = cubicBezierPoint(p0, p1, p2, p3, i / 48);
-            ctx.lineTo(pt.x, pt.y); head = pt;
-          }
-          if (!isSketch) { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 22; }
-          ctx.strokeStyle = isSketch ? '#0f172a' : '#00e5ff'; ctx.lineWidth = 10; ctx.stroke(); ctx.shadowBlur = 0;
-          const pulse = (Math.sin(t * Math.PI * 3) + 1) * 0.5;
-          const targetPt = scene.recipe === 'zoom-destination' ? p3 : head;
-          ctx.beginPath(); ctx.arc(targetPt.x, targetPt.y, 24 + pulse * 26, 0, Math.PI * 2);
-          ctx.strokeStyle = isSketch ? '#334155' : 'rgba(255, 59, 107, 0.65)'; ctx.lineWidth = 4; ctx.stroke();
-          for (const pin of [{ pt: p0, label: 'กรุงเทพฯ', color: '#38bdf8' }, { pt: p3, label: 'นครราชสีมา', color: '#ff3b6b' }]) {
-            ctx.fillStyle = isSketch ? '#1e293b' : pin.color;
-            ctx.beginPath(); ctx.arc(pin.pt.x, pin.pt.y, 18, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.stroke();
-            ctx.font = '700 34px "Prompt"';
-            const tw = ctx.measureText(pin.label).width;
-            const bx = pin.pt.x - (tw + 36) / 2, by = pin.pt.y - 76;
-            drawRoundRect(ctx, bx, by, tw + 36, 52, 12);
-            ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.88)'; ctx.fill();
-            ctx.strokeStyle = isSketch ? '#0f172a' : pin.color; ctx.lineWidth = 2.5; ctx.stroke();
-            ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(pin.label, pin.pt.x, by + 27);
-          }
-          const badgeText = scene.params?.distanceBadge || scene.params?.highlightMetric || '';
-          if (badgeText) {
-            ctx.font = '700 38px "Prompt"';
-            const bw = ctx.measureText(badgeText).width + 52;
-            drawRoundRect(ctx, 540 - bw / 2, 826, bw, 68, 34);
-            ctx.fillStyle = isSketch ? '#e2e8f0' : '#ff3b6b'; ctx.fill();
-            if (isSketch) { ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.stroke(); }
-            ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(badgeText, 540, 862);
-          }
-          ctx.restore();
+        ctx.save();
+        ctx.strokeStyle = isSketch ? 'rgba(100, 116, 139, 0.25)' : 'rgba(56, 189, 248, 0.08)';
+        ctx.lineWidth = 1.5;
+        for (let x = 0; x <= W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+        for (let y = 0; y <= H; y += 90) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+        const rng = mulberry32(timeline.seed + (scene.sceneId === 'scene-2' ? 99 : 0));
+        ctx.fillStyle = isSketch ? 'rgba(148, 163, 184, 0.16)' : 'rgba(30, 58, 138, 0.28)';
+        ctx.strokeStyle = isSketch ? 'rgba(71, 85, 105, 0.4)' : 'rgba(56, 189, 248, 0.22)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.ellipse(180 + rng() * 720, 520 + rng() * 720, 120 + rng() * 180, 80 + rng() * 140, rng() * Math.PI, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
         }
+        const p0 = { x: 250, y: 1180 }, p1 = { x: 340, y: 880 }, p2 = { x: 700, y: 940 }, p3 = { x: 820, y: 650 };
+        if (scene.recipe === 'zoom-destination') {
+          const zoom = 1 + 0.28 * easeOutCubic(p);
+          ctx.translate(p3.x, p3.y); ctx.scale(zoom, zoom); ctx.translate(-p3.x, -p3.y);
+        }
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+        ctx.strokeStyle = isSketch ? '#94a3b8' : 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 10; ctx.setLineDash([16, 12]); ctx.stroke(); ctx.setLineDash([]);
+        const routeProgress = scene.recipe === 'overview-route' ? easeOutCubic(clamp(p * 1.25, 0, 1)) : 1;
+        const maxStep = Math.max(1, Math.floor(48 * routeProgress));
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
+        let head = p0;
+        for (let i = 1; i <= maxStep; i++) {
+          const pt = cubicBezierPoint(p0, p1, p2, p3, i / 48);
+          ctx.lineTo(pt.x, pt.y); head = pt;
+        }
+        if (!isSketch) { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 22; }
+        ctx.strokeStyle = isSketch ? '#0f172a' : '#00e5ff'; ctx.lineWidth = 10; ctx.stroke(); ctx.shadowBlur = 0;
+        const pulse = (Math.sin(t * Math.PI * 3) + 1) * 0.5;
+        const targetPt = scene.recipe === 'zoom-destination' ? p3 : head;
+        ctx.beginPath(); ctx.arc(targetPt.x, targetPt.y, 24 + pulse * 26, 0, Math.PI * 2);
+        ctx.strokeStyle = isSketch ? '#334155' : 'rgba(255, 59, 107, 0.65)'; ctx.lineWidth = 4; ctx.stroke();
+        for (const pin of [{ pt: p0, label: 'กรุงเทพฯ', color: '#38bdf8' }, { pt: p3, label: 'นครราชสีมา', color: '#ff3b6b' }]) {
+          ctx.fillStyle = isSketch ? '#1e293b' : pin.color;
+          ctx.beginPath(); ctx.arc(pin.pt.x, pin.pt.y, 18, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.stroke();
+          ctx.font = '700 34px "Kanit", "Prompt"';
+          const tw = ctx.measureText(pin.label).width;
+          const bx = pin.pt.x - (tw + 36) / 2, by = pin.pt.y - 76;
+          drawRoundRect(ctx, bx, by, tw + 36, 52, 12);
+          ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.88)'; ctx.fill();
+          ctx.strokeStyle = isSketch ? '#0f172a' : pin.color; ctx.lineWidth = 2.5; ctx.stroke();
+          ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(pin.label, pin.pt.x, by + 27);
+        }
+        const badgeText = scene.params?.distanceBadge || scene.params?.highlightMetric || '';
+        if (badgeText) {
+          ctx.font = '700 38px "Kanit", "Prompt"';
+          const bw = ctx.measureText(badgeText).width + 52;
+          drawRoundRect(ctx, 540 - bw / 2, 826, bw, 68, 34);
+          ctx.fillStyle = isSketch ? '#e2e8f0' : '#ff3b6b'; ctx.fill();
+          if (isSketch) { ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.stroke(); }
+          ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(badgeText, 540, 862);
+        }
+        ctx.restore();
       }
 
-      // Top readability gradient backdrop for Headline
-      if (!isSketch && styleId !== 'mystery-stage') {
+      // Top readability gradient backdrop for Headline (dark stage only)
+      if (!isSketch && isDarkStage && styleId !== 'mystery-stage' && styleId !== 'liplnwza-mascot') {
         const topGrad = ctx.createLinearGradient(0, 0, 0, 500);
         topGrad.addColorStop(0, 'rgba(6, 12, 26, 0.88)');
         topGrad.addColorStop(0.7, 'rgba(6, 12, 26, 0.55)');
@@ -529,67 +578,75 @@ export function buildRendererHtml(rootDir) {
         ctx.setLineDash([12, 8]);
         ctx.strokeRect(80, 220, 920, 1560);
         ctx.setLineDash([]);
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(100, 250, 880, 195);
       }
 
-      // Layer: 2-Line Thai Headline + Subheadline
-      const headline = scene.headline || '';
-      const subheadline = scene.params?.subheadline || '';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-      ctx.font = '700 60px "Prompt"';
-      const headLines = wrapThaiLines(ctx, headline, 840, 2);
-      headLines.forEach((ln, idx) => {
-        ctx.fillText(ln, 540, 315 + idx * 66);
-      });
+      // Layer: 2-Line Thai Headline + Subheadline (for non-windowed styles)
+      if (styleId !== 'liplnwza-mascot') {
+        const headline = scene.headline || '';
+        const subheadline = scene.params?.subheadline || '';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
+        ctx.font = '800 62px "Kanit", "Prompt"';
+        const headLines = wrapThaiLines(ctx, headline, 840, 2);
+        headLines.forEach((ln, idx) => {
+          ctx.fillText(ln, 540, 310 + idx * 68);
+        });
 
-      if (subheadline) {
-        const subY = headLines.length > 1 ? 430 : 390;
-        ctx.fillStyle = isSketch ? '#334155' : '#ffd166';
-        ctx.font = '600 40px "Noto Sans Thai"';
-        const subLines = wrapThaiLines(ctx, subheadline, 840, 1);
-        ctx.fillText(subLines[0] || '', 540, subY);
+        if (subheadline) {
+          const subY = headLines.length > 1 ? 426 : 386;
+          ctx.fillStyle = isSketch ? '#334155' : '#ffd166';
+          ctx.font = '600 40px "Kanit", "Noto Sans Thai"';
+          const subLines = wrapThaiLines(ctx, subheadline, 840, 1);
+          ctx.fillText(subLines[0] || '', 540, subY);
+        }
       }
 
-      // Layer: Phrase / Word-Highlight Captions
+      // Layer: Multi-Style Thai Captions
       const activeCap = (scene.captions || []).find((c) => t >= c.startSec && t <= c.endSec);
+      const captionStyle = timeline.captionStyle || defaultCapStyle;
       if (isSketch) {
         ctx.strokeStyle = '#dc2626';
         ctx.lineWidth = 2.5;
-        ctx.strokeRect(100, captionBoxY, 880, 140);
+        ctx.strokeRect(90, captionCenterY - 72, 900, 144);
       }
       if (activeCap) {
-        drawWordHighlightCaption(ctx, activeCap, t, isSketch, captionBoxY);
+        drawSubtitleByStyle(ctx, activeCap, t, isSketch, captionStyle, captionCenterY);
       }
+
+      // Apply MotionForge-inspired Polish (Bloom + Vignette + Temporal Film/Paper Grain)
+      const polishOpts = timeline.polish || { grain: true, bloom: isDarkStage, vignette: true };
+      applyMotionForgePolish(ctx, W, H, frameIndex, {
+        ...polishOpts,
+        isDark: isDarkStage,
+        isSketch,
+      });
 
       // Global Overlay: Persistent Brand Badge
       const brandText = timeline.brandBadge || 'GenhaLipza';
-      ctx.font = '700 26px "Prompt"';
+      ctx.font = '700 26px "Kanit", "Prompt"';
       const brandW = ctx.measureText(brandText).width + 36;
-      drawRoundRect(ctx, W - 90 - brandW, 135, brandW, 48, 24);
-      ctx.fillStyle = isSketch ? '#e2e8f0' : 'rgba(15, 23, 42, 0.78)';
+      drawRoundRect(ctx, W - 90 - brandW, 130, brandW, 48, 24);
+      ctx.fillStyle = isSketch ? '#e2e8f0' : (isDarkStage ? 'rgba(15, 23, 42, 0.82)' : '#181B26');
       ctx.fill();
-      ctx.strokeStyle = isSketch ? '#0f172a' : 'rgba(56, 189, 248, 0.5)';
+      ctx.strokeStyle = isSketch ? '#0f172a' : (isDarkStage ? 'rgba(56, 189, 248, 0.55)' : '#FFE9A8');
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.fillStyle = isSketch ? '#0f172a' : '#38bdf8';
+      ctx.fillStyle = isSketch ? '#0f172a' : (isDarkStage ? '#38bdf8' : '#FFE9A8');
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(brandText, W - 90 - brandW / 2, 160);
+      ctx.fillText(brandText, W - 90 - brandW / 2, 155);
 
       // Sketch Metadata Header (Preview-only)
       if (isSketch) {
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(0, 0, W, 90);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '700 28px "Prompt"';
+        ctx.font = '700 28px "Kanit", "Prompt"';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(
-          'GATE 3 SKETCH | ' + styleId + ' | ' + scene.sceneId + ' (' + scene.recipe + ') | rev ' + timeline.revision,
+          'GATE 3 SKETCH | ' + styleId + ' | ' + scene.sceneId + ' (' + scene.recipe + ') | ' + captionStyle,
           40,
           45
         );

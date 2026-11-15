@@ -140,12 +140,78 @@ try {
   }
   console.log('✅ Gate 1 (Brief & Facts): facts.md ready');
 
-  // Gate 2: Audio-In + Cues -> Compile Timeline
+  // Gate 2: Audio-In / TTS + Cues -> Compile Timeline
   const cuesPath = path.resolve(ROOT, args.cuesOverride || job.audio.cuesPath);
-  const cues = JSON.parse(fs.readFileSync(cuesPath, 'utf8'));
+  const rawCues = JSON.parse(fs.readFileSync(cuesPath, 'utf8'));
+  let cues = rawCues;
 
-  let audioPath = path.resolve(ROOT, job.audio.sourcePath);
-  if (!fs.existsSync(audioPath)) {
+  const findPython = () => {
+    const venvPy = path.join(ROOT, '.venv', 'bin', 'python');
+    return fs.existsSync(venvPy) ? venvPy : 'python3';
+  };
+
+  let audioPath = job.audio.sourcePath ? path.resolve(ROOT, job.audio.sourcePath) : '';
+  const hasExplicitSource = audioPath && fs.existsSync(audioPath);
+
+  if (job.audio.mode === 'tts' && !hasExplicitSource) {
+    const speaker = job.audio.speaker || 'male';
+    const bgmMood = job.audio.bgmMood || 'calm';
+    const bgmGain = job.audio.bgmGain ?? 0.14;
+    const ttsCacheKey = sha256Json({ rawCues, speaker, bgmMood, bgmGain });
+    const ttsCachePath = path.join(jobDir, 'tts_cache.json');
+    const voiceTtsWav = path.join(jobDir, 'voice_tts.wav');
+    const cuesTimedPath = path.join(jobDir, 'cues_timed.json');
+    const mixedWav = path.join(jobDir, 'audio_mixed.wav');
+
+    const prevCache = fs.existsSync(ttsCachePath)
+      ? JSON.parse(fs.readFileSync(ttsCachePath, 'utf8'))
+      : null;
+
+    if (
+      prevCache?.key === ttsCacheKey
+      && fs.existsSync(voiceTtsWav)
+      && fs.existsSync(cuesTimedPath)
+      && fs.existsSync(mixedWav)
+    ) {
+      cues = JSON.parse(fs.readFileSync(cuesTimedPath, 'utf8'));
+      audioPath = mixedWav;
+      console.log(`ℹ️ Reusing cached Thai TTS + SFX/BGM mix (${cues.totalDurationSec}s, providers=${(cues.ttsProviders || []).join(',')})`);
+    } else {
+      const pyBin = findPython();
+      const ttsRes = spawnSync(pyBin, [
+        path.join(ROOT, 'core', 'audio', 'tts_adapter.py'),
+        '--cues-in', cuesPath,
+        '--out-wav', voiceTtsWav,
+        '--out-cues', cuesTimedPath,
+        '--speaker', speaker,
+      ], { encoding: 'utf8' });
+
+      if (ttsRes.status === 0 && fs.existsSync(voiceTtsWav) && fs.existsSync(cuesTimedPath)) {
+        cues = JSON.parse(fs.readFileSync(cuesTimedPath, 'utf8'));
+        const mixRes = spawnSync(pyBin, [
+          path.join(ROOT, 'core', 'audio', 'audio_mixer.py'),
+          '--voice-wav', voiceTtsWav,
+          '--cues', cuesTimedPath,
+          '--out-wav', mixedWav,
+          '--mood', bgmMood,
+          '--bgm-gain', String(bgmGain),
+        ], { encoding: 'utf8' });
+
+        if (mixRes.status === 0 && fs.existsSync(mixedWav)) {
+          audioPath = mixedWav;
+          writeJsonAtomic(ttsCachePath, { key: ttsCacheKey, providers: cues.ttsProviders || [] });
+          console.log(`✅ Thai TTS (${(cues.ttsProviders || []).join(',')}) + SFX/BGM (${bgmMood}) -> ${cues.totalDurationSec}s`);
+        } else {
+          console.warn('⚠️ audio_mixer.py failed, using dry TTS voice:', mixRes.stderr || mixRes.stdout);
+          audioPath = voiceTtsWav;
+        }
+      } else {
+        console.warn('⚠️ Thai TTS failed/offline, falling back to deterministic fixture audio:', ttsRes.stderr || ttsRes.stdout);
+      }
+    }
+  }
+
+  if (!audioPath || !fs.existsSync(audioPath)) {
     audioPath = path.join(jobDir, 'voice_fixture.wav');
     if (!fs.existsSync(audioPath)) {
       generateStyleAudioFixture({
@@ -208,13 +274,20 @@ try {
     totalFrames,
     seed: job.seed,
     brandBadge: 'GenhaLipza',
+    ...(job.captionStyle ? { captionStyle: job.captionStyle } : {}),
+    ...(job.themeMode ? { themeMode: job.themeMode } : {}),
+    ...(job.polish ? { polish: job.polish } : {}),
     buildIdentity: {
-      engineVersion: '0.3.0-phase2b',
+      engineVersion: '0.4.0-sprint1',
       rendererHash,
       styleId: job.styleId,
-      styleVersion: '0.1.0',
+      styleVersion: '0.2.0',
       inputHash,
       fontHashes: {
+        'Kanit-Regular.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Kanit-Regular.ttf')),
+        'Kanit-SemiBold.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Kanit-SemiBold.ttf')),
+        'Kanit-Bold.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Kanit-Bold.ttf')),
+        'Kanit-ExtraBold.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Kanit-ExtraBold.ttf')),
         'Prompt-Regular.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Prompt-Regular.ttf')),
         'Prompt-Bold.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'Prompt-Bold.ttf')),
         'NotoSansThai.ttf': sha256File(path.join(ROOT, 'assets', 'fonts', 'NotoSansThai.ttf')),
@@ -317,6 +390,12 @@ try {
     console.log(`✅ Gate 4 (Visual Storyboard): ${gate4Keyframes.length} keyframes + sheet in ${Date.now() - tG4}ms`);
 
     // Gate 5: Render frames with per-scene cache & atomic checkpointing
+    for (const file of fs.readdirSync(framesDir)) {
+      const m = file.match(/^frame_(\d{5})\.png$/);
+      if (m && Number(m[1]) >= totalFrames) {
+        fs.unlinkSync(path.join(framesDir, file));
+      }
+    }
     const tG5 = Date.now();
     for (let f = 0; f < totalFrames; f++) {
       const sc = timeline.scenes.find((s) => f >= s.startFrame && f < s.endFrame)
@@ -380,6 +459,7 @@ try {
     '-framerate', String(job.fps),
     '-i', path.join(framesDir, 'frame_%05d.png'),
     '-i', audioPath,
+    '-frames:v', String(totalFrames),
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-crf', '18',
     '-af', p2Filter,
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',

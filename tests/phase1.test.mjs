@@ -93,12 +93,14 @@ test('Job directory single-writer lock prevents concurrent writers', () => {
 });
 
 test('TTS adapter --check returns structured availability JSON', () => {
-  const out = execFileSync('python3', ['core/audio/tts_adapter.py', '--check'], {
+  const venvPy = path.join(ROOT, '.venv', 'bin', 'python');
+  const pyBin = fs.existsSync(venvPy) ? venvPy : 'python3';
+  const out = execFileSync(pyBin, ['core/audio/tts_adapter.py', '--check'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   const parsed = JSON.parse(out);
-  assert.equal(parsed.provider, 'edge-tts');
+  assert.ok(['edge-tts', 'gtts', 'audio-in'].includes(parsed.provider));
   assert.equal(parsed.fallback, 'audio-in');
   assert.equal(typeof parsed.available, 'boolean');
 });

@@ -8,10 +8,19 @@
   "fps": 30,
   "seed": 5003,
   "audio": {
-    "mode": "audio-in",
-    "sourcePath": "jobs/wonlok-kra-canal/voice_fixture.wav",
+    "mode": "tts",
     "cuesPath": "assets/fixtures/wonlok-3-topics/kra-canal/cues.json",
     "targetLufs": -16.0,
-    "maxTruePeakDbtp": -1.0
+    "maxTruePeakDbtp": -1.0,
+    "speaker": "male",
+    "bgmMood": "calm",
+    "bgmGain": 0.14
+  },
+  "captionStyle": "bold-karaoke",
+  "themeMode": "neon-map",
+  "polish": {
+    "grain": true,
+    "bloom": true,
+    "vignette": true
   }
 }

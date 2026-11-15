@@ -4,37 +4,35 @@
 
 ## สถานะปัจจุบัน
 
-**Phase 2 Complete (MVP 4 Styles Verified End-to-End) — Ready for Phase 3 (Style Factory & Multi-Aspect)**
+**Sprint 1 Overhaul Complete (`liplnwza-mascot` + `wonlok-plus` Clean-Room 100%) — Ready for Owner Review & Sprint 2**
 
-### สรุปผลการพัฒนาและตรวจรับจริงทั้ง 4 สไตล์ใน MVP
+### สรุปผลการยกระดับคุณภาพใน Sprint 1 (Clean-Room 100%)
 
-1. **`wonlok-plus` (Phase 2A):**
-   - Natural Earth GeoJSON Web Mercator map + Country Highlight Mask + Neon Geo Routes + Compare Cards + Word-Highlight Captions + Brand Badge
-   - ผ่าน Automated QC ครบทั้ง **3 หัวข้อ (30s / 900 frames / 1080×1920)**: `wonlok-thai-hsr`, `wonlok-suez-route`, `wonlok-kra-canal`
-2. **`liplnwza-mascot` (Phase 2B):**
-   - 3-Zone Paper-Cutout Card Stage + Clean-Room Vector Mascot Placeholder (6 poses + 6 visemes + blink) + รองรับ Private Owner PNG Overlay ผ่าน `privateAssetsDir` / `GENHALIPZA_PRIVATE_ASSETS` (แยกสิทธิ์ไฟล์จริงออกจาก public repo)
-   - Clean-Room Thai Vowel-to-Viseme Estimator (`core/audio/thai_visemes.mjs`)
-   - ผ่าน Automated QC (`mvp-mascot-15s`, 450 frames): `-15.93 LUFS`, `TP -10.13 dBTP`, SSIM `0.9880 / 0.9874 / 0.9892`
-3. **`stickman-duo` (Phase 2B):**
-   - Parametric 2-Speaker Stickman Rig (`core/rig/stickman-rig.mjs`) + Active Speaker Spotlight + Gesture/Expression + Multi-speaker Tone Fixture
-   - ผ่าน Automated QC (`mvp-stickman-15s`, 450 frames): `-16.04 LUFS`, `TP -11.66 dBTP`, SSIM `0.9892 / 0.9895 / 0.9879`
-4. **`mystery-stage` (Phase 2B):**
-   - Procedural Canvas Atmosphere (`core/atmosphere/mystery-fx.mjs`: Fog, Flickering Candle, Flashlight Sweep, Vignette) + Polaroid Evidence Board + Animated Red Thread + Procedural Dark Ambient SFX (`core/audio/audio_prep.mjs`)
-   - ผ่าน Automated QC (`mvp-mystery-15s`, 450 frames): `-16.01 LUFS`, `TP -5.31 dBTP`, SSIM `0.9720 / 0.9732 / 0.9718`
+1. **ระบบเสียงพูดไทยจริง + SFX + Ducked BGM:**
+   - [`core/audio/tts_adapter.py`](core/audio/tts_adapter.py): สังเคราะห์เสียงพูดไทยทีละบรรทัด (`edge-tts` primary + `gTTS` fallback + `Audio-In`) พร้อม re-time `cues.json` และคำนวณ Word Timings อัตโนมัติ
+   - [`core/audio/audio_mixer.py`](core/audio/audio_mixer.py): สังเคราะห์ SFX (`whoosh`, `pop`, `ding`, `boom`) และ BGM bed (`calm`, `warm`, `playful`, `dark`) ด้วย NumPy + speech ducking อัตโนมัติ ก่อนทำ 2-pass `-16 LUFS`
+2. **ฟอนต์ & ซับไตเติลหลากหลายสไตล์ + MotionForge Visual Polish:**
+   - เพิ่มฟอนต์ OFL `Kanit` (`Regular`, `SemiBold`, `Bold`, `ExtraBold`) ใน `assets/fonts/`
+   - [`core/engine/subtitles.mjs`](core/engine/subtitles.mjs): รองรับ 4 สไตล์ (`pop-chips`, `bold-karaoke`, `clean-pill`, `cinema-minimal`)
+   - [`core/engine/polish.mjs`](core/engine/polish.mjs): เพิ่ม Bloom, Vignette และ Temporal Grain แบบ deterministic
+3. **2 สไตล์หลักของ Sprint 1 (`9:16` 1080×1920) ผ่าน Automated QC:**
+   - **`liplnwza-mascot` (`mvp-mascot-15s`, 397 frames / 13.217s):**
+     - เวที 3 โซน AoT-style Paper (`#FFF6E8` + dot grid + Mac header) + Cel-Shaded Mascot ใหม่ ([`core/rig/mascot-rig.mjs`](core/rig/mascot-rig.mjs)) + ซับ `pop-chips` + เสียงไทย `gtts` + BGM `playful`
+     - **QC:** `-16.16 LUFS`, `TP -1.78 dBTP`, SSIM `0.9894 / 0.9863 / 0.9884`
+   - **`wonlok-plus` (`wonlok-kra-canal`, 698 frames / 23.273s):**
+     - แผนที่ Neo-Geo + Coastal Glow + Live Telemetry Pill + Smart Label Collision Solver + ซับ `bold-karaoke` + เสียงไทย `gtts` + BGM `calm`
+     - **QC:** `-16.16 LUFS`, `TP -1.96 dBTP`, SSIM `0.9790 / 0.9790 / 0.9792` (ผ่านครบทุกข้อ)
 
-## คำสั่งทดสอบและรัน MVP ทั้ง 4 สไตล์
+## คำสั่งทดสอบและรัน Sprint 1
 
 ```bash
 npm run validate:schemas
 npm run doctor
 npm test
-node core/cli/pipeline.mjs run --job assets/fixtures/wonlok-3-topics/thai-hsr/job.json
 node core/cli/pipeline.mjs run --job assets/fixtures/mvp-mascot/job.json
-node core/cli/pipeline.mjs run --job assets/fixtures/mvp-stickman/job.json
-node core/cli/pipeline.mjs run --job assets/fixtures/mvp-mystery/job.json
+node core/cli/pipeline.mjs run --job assets/fixtures/wonlok-3-topics/kra-canal/job.json
 ```
 
-## Next action (Phase 3 & Phase 4)
+## Next action (Sprint 2)
 
-- **Phase 3 (Style Factory & Multi-Aspect):** สร้าง Style Token/Archetype Composer สำหรับขยายคลัง Core 33 & Storytelling Presets + รองรับ Multi-Aspect (`16:9`, `1:1`, `4:5`) และเพิ่มระบบ Benchmark (Cold vs Warm)
-- **Phase 4 (Multi-Platform Skill Exporter):** สร้าง `lipza export` สำหรับ Antigravity/Gemini, OpenAI Codex (`.codex-plugin`), และ Claude Code
+- **Sprint 2:** ยกระดับ **`stickman-duo`** (2 ตัวละครโต้ตอบ + Speech Bubble + Expression) และ **`mystery-stage`** (Moody Atmosphere + Polaroid Board + Dark BGM + Sound Design) ตาม [`docs/OVERHAUL_BLUEPRINT.md`](docs/OVERHAUL_BLUEPRINT.md)
