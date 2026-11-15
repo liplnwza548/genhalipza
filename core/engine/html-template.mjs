@@ -539,7 +539,7 @@ export function buildRendererHtml(rootDir) {
           ctx.fillStyle = isSketch ? '#1e293b' : pin.color;
           ctx.beginPath(); ctx.arc(pin.pt.x, pin.pt.y, 18, 0, Math.PI * 2); ctx.fill();
           ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.stroke();
-          ctx.font = '700 34px "Kanit", "Prompt"';
+          ctx.font = '700 34px "Prompt", "Kanit"';
           const tw = ctx.measureText(pin.label).width;
           const bx = pin.pt.x - (tw + 36) / 2, by = pin.pt.y - 76;
           drawRoundRect(ctx, bx, by, tw + 36, 52, 12);
@@ -550,7 +550,7 @@ export function buildRendererHtml(rootDir) {
         }
         const badgeText = scene.params?.distanceBadge || scene.params?.highlightMetric || '';
         if (badgeText) {
-          ctx.font = '700 38px "Kanit", "Prompt"';
+          ctx.font = '700 38px "Prompt", "Kanit"';
           const bw = ctx.measureText(badgeText).width + 52;
           drawRoundRect(ctx, 540 - bw / 2, 826, bw, 68, 34);
           ctx.fillStyle = isSketch ? '#e2e8f0' : '#ff3b6b'; ctx.fill();
@@ -587,7 +587,7 @@ export function buildRendererHtml(rootDir) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = isSketch ? '#0f172a' : '#ffffff';
-        ctx.font = '800 62px "Kanit", "Prompt"';
+        ctx.font = '800 62px "Prompt", "Kanit"';
         const headLines = wrapThaiLines(ctx, headline, 840, 2);
         headLines.forEach((ln, idx) => {
           ctx.fillText(ln, 540, 310 + idx * 68);
@@ -596,7 +596,7 @@ export function buildRendererHtml(rootDir) {
         if (subheadline) {
           const subY = headLines.length > 1 ? 426 : 386;
           ctx.fillStyle = isSketch ? '#334155' : '#ffd166';
-          ctx.font = '600 40px "Kanit", "Noto Sans Thai"';
+          ctx.font = '600 40px "Prompt", "Kanit", "Noto Sans Thai"';
           const subLines = wrapThaiLines(ctx, subheadline, 840, 1);
           ctx.fillText(subLines[0] || '', 540, subY);
         }
@@ -624,7 +624,7 @@ export function buildRendererHtml(rootDir) {
 
       // Global Overlay: Persistent Brand Badge
       const brandText = timeline.brandBadge || 'GenhaLipza';
-      ctx.font = '700 26px "Kanit", "Prompt"';
+      ctx.font = '700 26px "Prompt", "Kanit"';
       const brandW = ctx.measureText(brandText).width + 36;
       drawRoundRect(ctx, W - 90 - brandW, 130, brandW, 48, 24);
       ctx.fillStyle = isSketch ? '#e2e8f0' : (isDarkStage ? 'rgba(15, 23, 42, 0.82)' : '#181B26');
@@ -642,7 +642,7 @@ export function buildRendererHtml(rootDir) {
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(0, 0, W, 90);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '700 28px "Kanit", "Prompt"';
+        ctx.font = '700 28px "Prompt", "Kanit"';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(

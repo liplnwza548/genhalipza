@@ -211,7 +211,61 @@ try {
     }
   }
 
+  // Audio-In (Philip's clone voice, locked 2026-11-15): never synthesize a
+  // stand-in for Philip's voice. The real clone WAV must exist at
+  // job.audio.sourcePath (private_assets/voice/, gitignored). Normalize it to
+  // 48kHz mono, pad with silence to the authored timeline length, then mix
+  // SFX + ducked BGM under it (BGM/SFX are approved).
+  if (job.audio.mode === 'audio-in' && hasExplicitSource) {
+    const totalDur = cues.totalDurationSec || 10.0;
+    const voice48k = path.join(jobDir, 'voice_in_48k.wav');
+    const mixedWav = path.join(jobDir, 'audio_mixed.wav');
+    const durProbe = spawnSync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      audioPath,
+    ], { encoding: 'utf8' });
+    const voiceDur = parseFloat((durProbe.stdout || '').trim());
+    if (!Number.isFinite(voiceDur)) {
+      throw new Error(`Audio-In source unreadable: ${job.audio.sourcePath} — place Philip's real clone voice WAV there (48kHz mono PCM).`);
+    }
+    if (voiceDur > totalDur + 0.05) {
+      throw new Error(`Audio-In voice (${voiceDur.toFixed(2)}s) is longer than the authored timeline (${totalDur}s) — re-time cues.json to the real clone voice before rendering (see docs/PRIVATE_ASSETS.md).`);
+    }
+    const normRes = spawnSync('ffmpeg', [
+      '-y', '-i', audioPath,
+      '-af', 'aresample=48000,apad',
+      '-t', String(totalDur),
+      '-ac', '1', '-c:a', 'pcm_s16le',
+      voice48k,
+    ], { encoding: 'utf8' });
+    if (normRes.status !== 0 || !fs.existsSync(voice48k)) {
+      throw new Error(`Audio-In normalize failed for ${job.audio.sourcePath}: ${(normRes.stderr || '').slice(-500)}`);
+    }
+    const mixRes = spawnSync(findPython(), [
+      path.join(ROOT, 'core', 'audio', 'audio_mixer.py'),
+      '--voice-wav', voice48k,
+      '--cues', cuesPath,
+      '--out-wav', mixedWav,
+      '--mood', job.audio.bgmMood || 'calm',
+      '--bgm-gain', String(job.audio.bgmGain ?? 0.14),
+    ], { encoding: 'utf8' });
+    if (mixRes.status === 0 && fs.existsSync(mixedWav)) {
+      audioPath = mixedWav;
+      console.log(`✅ Clone voice (audio-in) + SFX/BGM (${job.audio.bgmMood || 'calm'}) -> ${totalDur}s`);
+    } else {
+      console.warn('⚠️ audio_mixer.py failed for audio-in voice, using dry clone voice:', mixRes.stderr || mixRes.stdout);
+      audioPath = voice48k;
+    }
+  }
+
   if (!audioPath || !fs.existsSync(audioPath)) {
+    // Locked 2026-11-15: a job that names a clone-voice file must never
+    // silently render with synthetic fixture audio. Fail loudly instead.
+    if (job.audio.mode === 'audio-in' && job.audio.sourcePath) {
+      throw new Error(`Audio-In source missing: ${job.audio.sourcePath} — generate Philip's clone voice for this script on Colab (VoxCPM2) and place the 48kHz mono WAV at <repo>/private_assets/voice/ (gitignored, never commit voice files).`);
+    }
     audioPath = path.join(jobDir, 'voice_fixture.wav');
     if (!fs.existsSync(audioPath)) {
       generateStyleAudioFixture({

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
 GenhaLipza Thai TTS & Alignment Adapter (Sprint 1 Overhaul)
-- Primary: Edge-TTS Thai (th-TH-NiwatNeural / th-TH-PremwadeeNeural) with WordBoundary timings
-- Fallback 1: gTTS Thai (free HTTPS) when Edge-TTS WebSocket is throttled/blocked
-- Fallback 2: Clean JSON status for Audio-In mode if offline
+LOCKED 2026-11-15 (Philip): production voice is ALWAYS Philip's own clone
+voice (VoxCPM2, generated on Colab) fed in via Audio-In. Free TTS below is
+a DEV-ONLY fallback for timing/layout tests — it must never be the voice of
+a clip sent to Philip.
+- Dev fallback: Edge-TTS Thai (th-TH-NiwatNeural / th-TH-PremwadeeNeural) with WordBoundary timings
+- Dev fallback 2: gTTS Thai (free HTTPS) when Edge-TTS WebSocket is throttled/blocked
+- Fallback 3: Clean JSON status for Audio-In mode if offline
 - Synthesizes line-by-line, measures real audio durations via ffprobe,
   assembles 48kHz mono WAV with natural pacing, and emits updated scene/caption/word timings.
 """

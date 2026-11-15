@@ -2,13 +2,14 @@
   "schemaVersion": 1,
   "jobId": "mvp-mascot-15s",
   "title": "3 เทคนิคประหยัดไฟหน้าร้อน (LiplnwZa Mascot 15s)",
-  "revision": 1,
+  "revision": 2,
   "styleId": "liplnwza-mascot",
   "aspect": "9:16",
   "fps": 30,
   "seed": 6101,
   "audio": {
-    "mode": "tts",
+    "mode": "audio-in",
+    "sourcePath": "private_assets/voice/mvp-mascot-15s-philip.wav",
     "cuesPath": "assets/fixtures/mvp-mascot/cues.json",
     "targetLufs": -16.0,
     "maxTruePeakDbtp": -1.0,
@@ -22,5 +23,6 @@
     "grain": true,
     "bloom": true,
     "vignette": true
-  }
+  },
+  "privateAssetsDir": "private_assets"
 }

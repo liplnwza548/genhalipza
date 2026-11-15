@@ -30,14 +30,22 @@
 - **[`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md)** — แผนแม่บทฉบับสมบูรณ์ (สถาปัตยกรรม, การดึงโมดูลเก่ามาใช้จริง, เวิร์กโฟลว์ 5 ด่าน, Cloud VM + PC Setup, MVP 4 สไตล์ และแผนขยาย 33 + 100+ สไตล์)
 - **[`docs/REVIEW_GUIDE_FOR_CHATGPT.md`](docs/REVIEW_GUIDE_FOR_CHATGPT.md)** — คู่มือและชุดคำถามสำหรับส่งให้ ChatGPT ช่วยรีวิวและจับจุดเสี่ยงของแผนนี้
 - **[`docs/CHATGPT_REVIEW_2026-11-15.md`](docs/CHATGPT_REVIEW_2026-11-15.md)** — ผลรีวิวเชิงวิศวกรรมจากแผนและโค้ดต้นทาง: ตอบครบ 5 ข้อ พร้อมความเสี่ยง เกณฑ์ตรวจรับ และลำดับพัฒนาที่เสนอ
+- **[`docs/OVERHAUL_BLUEPRINT.md`](docs/OVERHAUL_BLUEPRINT.md)** — พิมพ์เขียวการยกเครื่องภาพและเสียง (Sprint 1–4) แบบ Clean-Room 100%
+- **[`docs/PRIVATE_ASSETS.md`](docs/PRIVATE_ASSETS.md)** — วิธีวางไฟล์ส่วนตัวของ Philip (เสียงโคลน + ภาพมาสคอตตัวจริง) ที่ห้ามขึ้น repo สาธารณะ
 - **[`STATUS.md`](STATUS.md)** — สรุปสถานะ ข้อค้นพบ เกณฑ์ตรวจรับ และลำดับงานสำหรับรับช่วง
 
 ---
 
-## 🚦 สถานะปัจจุบัน
+## 🚦 สถานะปัจจุบัน (อัปเดต 15 พ.ย. 2026)
 
-- **Phase:** `Architecture Review Completed — Plan Revision Pending` (รีวิวแผนแล้ว; ยังไม่เริ่มพัฒนา Phase 0)
-- **ผลรีวิว 15 พ.ย. 2026:** เก็บเวิร์กโฟลว์ 5 ด่าน แต่แนะนำเริ่มคลิปทดสอบ 10 วินาทีหนึ่งสไตล์ให้จบก่อน แล้วเพิ่มอีก 3 สไตล์ทีละตัว; เวลา render และ reuse 65–70% ยังไม่ผ่านการพิสูจน์
-- **จุดที่ต้องจัดการก่อนย้ายของเก่า:** สิทธิ์ raw mascot, renderer ที่ยังมีพาธเฉพาะเครื่อง และการทำให้ approval/cache เก่าใช้ต่อไม่ได้เมื่อ input เปลี่ยน ดูรายละเอียดและข้อเสนอ Phase 0A–0B ในรายงานรีวิว
-- **สถานะข้อเสนอ:** รอ Philip ตัดสินใจปรับแผน; MASTER_PLAN เดิมยังไม่ถูกแก้ และยังไม่มี production acceptance
+- **Phase:** `Sprint 1 Complete` — ผ่าน Phase 0A → 0B → 1 → 2A → 2B แล้ว MVP 4 สไตล์ (`wonlok-plus`, `liplnwza-mascot`, `stickman-duo`, `mystery-stage`) ตรวจ QC ผ่าน; Sprint 1 ยกระดับ `liplnwza-mascot` + `wonlok-plus` (เสียงไทย + SFX/BGM + ซับ 4 แบบ + Visual Polish) ดูรายละเอียดใน [`STATUS.md`](STATUS.md)
+- **งานที่ค้าง:** แก้ 4 อย่างให้ตรงคำตัดสินของ Philip (branch `fix/locked-decisions`, ยังไม่ได้ push) — เสียงโคลนผ่าน Audio-In, มาสคอตตัวจริง, ฟอนต์หลัก Prompt, และ README ฉบับนี้
+
+### 🔒 คำตัดสินที่ล็อกไว้ (Philip, 15 พ.ย. 2026 — ห้ามเปลี่ยนถ้า Philip ไม่ได้สั่ง)
+
+1. **เสียงพากย์ = เสียงของ Philip เอง** (เสียงโคลน VoxCPM2 สร้างบน Colab) ผ่าน Audio-In เท่านั้น — ห้ามใช้เสียงฟรี edge-tts/gTTS เป็นเสียงของคลิป (ใช้ได้แค่ตอนทดสอบ) — ElevenLabs ยังไม่ตัดสินใจ ห้ามสมัคร/ติดตั้ง
+2. **มาสคอต = ตัวจริงของ Philip** (ภาพต้นแบบ master lock) ผ่านโฟลเดอร์ส่วนตัว `private_assets/` เท่านั้น ห้ามอัปโหลดภาพตัวจริงลง repo สาธารณะ — ตัวที่วาดจากโค้ดเป็นแค่ตัวสำรองตอนทดสอบ
+3. **สไตล์ wonlok เก็บไว้** — ที่ปิดไปคือโปรเจกต์ก๊อปคลิปวนโลกแบบเหมือนเป๊ะๆ ไม่ใช่สไตล์แผนที่ (ห้ามใช้ภาพ/เสียง/โลโก้ของวนโลก ห้ามวาดเส้นแบ่งประเทศที่ไม่มีจริง ห้ามแต่งข้อมูลแม่น้ำเอง)
+4. **ตัวหนังสือซับ = Prompt เป็นหลัก** (Kanit เป็นตัวเลือกเสริมได้)
+5. **เพลงพื้นหลัง (BGM) กับเสียงเอฟเฟกต์ (SFX) ใส่ได้**
 - **Target Execution Environment:** Cloud Agent VMs (Antigravity / Gemini Task / ChatGPT Work) + Local Windows/Mac fallback

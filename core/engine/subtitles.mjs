@@ -2,7 +2,9 @@
  * Browser-side Thai Multi-Style Subtitle Engine (Clean-Room)
  * Supports 4 distinct visual presets:
  *   - pop-chips:      Spring-popping colored pills (0.6x -> 1.08x -> 1.0x in 0.13s, ±2° tilt, ink outline)
- *   - bold-karaoke:   Kanit ExtraBold white text with thick dark outline + active word gold pop
+ *   - bold-karaoke:   Prompt Bold white text with thick dark outline + active word gold pop
+ *   Font rule (locked 2026-11-15): Prompt is the primary font in every preset;
+ *   Kanit stays only as a fallback in the font stack, never as the first family.
  *   - clean-pill:     Translucent frosted dark capsule with active word highlight
  *   - cinema-minimal: Crisp documentary lower-third with subtle drop shadow
  */
@@ -51,7 +53,7 @@ export function getSubtitlesScript() {
         { bg: '#F44336', fg: '#FFFDF6' },
         { bg: '#38B577', fg: '#181B26' },
       ];
-      ctx.font = '800 54px "Kanit", "Prompt"';
+      ctx.font = '800 54px "Prompt", "Kanit"';
       const rows = buildWordRows(ctx, activeCap, 880, 3);
       const rowGap = 112;
       const startY = rows.length === 1 ? centerY : centerY - rowGap * 0.48;
@@ -98,7 +100,7 @@ export function getSubtitlesScript() {
           ctx.stroke();
 
           ctx.fillStyle = isSketch ? '#0f172a' : pal.fg;
-          ctx.font = '800 ' + Math.round(52 * scaleFit) + 'px "Kanit", "Prompt"';
+          ctx.font = '800 ' + Math.round(52 * scaleFit) + 'px "Prompt", "Kanit"';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(w.text.trim(), 0, 3);
@@ -111,13 +113,13 @@ export function getSubtitlesScript() {
 
     function drawBoldKaraokeCaption(ctx, activeCap, t, isSketch, centerY) {
       const baseSize = 60;
-      ctx.font = '800 ' + baseSize + 'px "Kanit", "Prompt"';
+      ctx.font = '800 ' + baseSize + 'px "Prompt", "Kanit"';
       const rows = buildWordRows(ctx, activeCap, 860, 5);
       const lineH = 84;
       const startY = rows.length === 1 ? centerY : centerY - lineH * 0.48;
 
       rows.forEach((row, rIdx) => {
-        ctx.font = '800 ' + baseSize + 'px "Kanit", "Prompt"';
+        ctx.font = '800 ' + baseSize + 'px "Prompt", "Kanit"';
         const rawWidths = row.map((w) => ctx.measureText(w.text).width);
         const gaps = row.map((w, idx) => {
           if (idx >= row.length - 1) return 0;
@@ -129,7 +131,7 @@ export function getSubtitlesScript() {
         const totalRawW = rawWidths.reduce((s, w) => s + w, 0) + gaps.reduce((s, g) => s + g, 0);
         const scaleFit = Math.min(1, 920 / Math.max(1, totalRawW));
         const fontSize = Math.round(baseSize * scaleFit);
-        ctx.font = '800 ' + fontSize + 'px "Kanit", "Prompt"';
+        ctx.font = '800 ' + fontSize + 'px "Prompt", "Kanit"';
 
         const widths = row.map((w) => ctx.measureText(w.text).width);
         const scaledGaps = gaps.map((g) => g * scaleFit);
@@ -153,7 +155,7 @@ export function getSubtitlesScript() {
             const sc = 1 + 0.08 * Math.sin(u * Math.PI * 0.5);
             ctx.scale(sc, sc);
           }
-          ctx.font = '800 ' + fontSize + 'px "Kanit", "Prompt"';
+          ctx.font = '800 ' + fontSize + 'px "Prompt", "Kanit"';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.lineJoin = 'round';
@@ -179,7 +181,7 @@ export function getSubtitlesScript() {
             const sc = 1 + 0.08 * Math.sin(u * Math.PI * 0.5);
             ctx.scale(sc, sc);
           }
-          ctx.font = '800 ' + fontSize + 'px "Kanit", "Prompt"';
+          ctx.font = '800 ' + fontSize + 'px "Prompt", "Kanit"';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillStyle = isSketch
@@ -210,7 +212,7 @@ export function getSubtitlesScript() {
       ctx.stroke();
       ctx.restore();
 
-      ctx.font = '700 42px "Kanit", "Noto Sans Thai"';
+      ctx.font = '700 42px "Prompt", "Kanit", "Noto Sans Thai"';
       const rows = buildWordRows(ctx, activeCap, 830, 6);
       rows.forEach((row, rIdx) => {
         const rw = row.reduce((acc, w) => acc + ctx.measureText(w.text).width, 0);
@@ -230,7 +232,7 @@ export function getSubtitlesScript() {
     }
 
     function drawCinemaMinimalCaption(ctx, activeCap, t, isSketch, centerY) {
-      ctx.font = '600 46px "Kanit", "Noto Sans Thai"';
+      ctx.font = '600 46px "Prompt", "Kanit", "Noto Sans Thai"';
       const rows = buildWordRows(ctx, activeCap, 860, 6);
       const lineH = 60;
       const startY = rows.length === 1 ? centerY : centerY - lineH * 0.45;

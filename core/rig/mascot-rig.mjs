@@ -1,9 +1,15 @@
 /**
- * Browser-side Clean-Room Mascot Rig + Private Owner Asset Adapter (Overhauled)
- * - If window.__MASCOT_ASSETS__ is loaded from privateAssetsDir, renders the owner's
- *   high-res PNG poses & mouth overlays cleanly.
- * - Otherwise renders an original Clean-Room Cel-Shaded Mascot (styled hair, hoodie,
- *   expressive eyes/brows, articulated hands, 6 poses + 6 smooth visemes + blink).
+ * Browser-side Mascot Rig + Private Owner Asset Adapter (Overhauled)
+ * LOCKED 2026-11-15 (Philip): the REAL LipInwZa mascot (master-lock PNG) is the
+ * primary mascot, loaded from privateAssetsDir / GENHALIPZA_PRIVATE_ASSETS.
+ * - If window.__MASCOT_ASSETS__ is loaded, renders the owner's high-res PNG
+ *   poses & mouth overlays cleanly. This is the ONLY approved mascot for
+ *   LipInwZa clips.
+ * - Otherwise renders a generic Clean-Room Cel-Shaded Mascot (styled hair,
+ *   hoodie, expressive eyes/brows, articulated hands, 6 poses + 6 smooth
+ *   visemes + blink) as a FALLBACK ONLY for testing when no private assets
+ *   are present. The fallback is NOT the LipInwZa mascot and must never be
+ *   presented as Philip's mascot.
  */
 export function getMascotRigScript() {
   return `
@@ -200,7 +206,7 @@ export function getMascotRigScript() {
         ctx.fillStyle = 'rgba(56, 189, 248, 0.16)';
         ctx.fill();
         ctx.fillStyle = accent;
-        ctx.font = '800 16px "Kanit", "Prompt"';
+        ctx.font = '800 16px "Prompt", "Kanit"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('LIPZA', 0, -141);

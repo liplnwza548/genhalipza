@@ -202,7 +202,7 @@ export function getWonlokStyleScript() {
           ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5; ctx.stroke();
 
           if (lbl) {
-            ctx.font = '700 32px "Kanit", "Prompt"';
+            ctx.font = '700 32px "Prompt", "Kanit"';
             const bw = ctx.measureText(lbl).width + 34;
             const bh = 50;
             const box = placeNonOverlappingBox(pt.x, pt.y, bw, bh, placedRects, W, 500, 1240);
@@ -223,7 +223,7 @@ export function getWonlokStyleScript() {
 
         if (rt.badge) {
           const midPt = cubicBezierPoint(p0, p1, p2, p3, 0.5);
-          ctx.font = '700 32px "Kanit", "Prompt"';
+          ctx.font = '700 32px "Prompt", "Kanit"';
           const bw = ctx.measureText(rt.badge).width + 46;
           const bh = 58;
           const box = placeNonOverlappingBox(midPt.x, midPt.y + 40, bw, bh, placedRects, W, 500, 1240);
@@ -248,7 +248,7 @@ export function getWonlokStyleScript() {
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5; ctx.stroke();
 
         if (mk.label) {
-          ctx.font = '700 34px "Kanit", "Prompt"';
+          ctx.font = '700 34px "Prompt", "Kanit"';
           const bw = ctx.measureText(mk.label).width + 38;
           const bh = 54;
           const box = placeNonOverlappingBox(pt.x, pt.y, bw, bh, placedRects, W, 500, 1240);
@@ -266,7 +266,7 @@ export function getWonlokStyleScript() {
         const txt = activeTelemetry.hours
           ? ('ราว ' + activeTelemetry.km.toLocaleString('en-US') + ' กม.  |  ~' + activeTelemetry.hours + ' ชม.')
           : ('ระยะทาง ~' + activeTelemetry.km.toLocaleString('en-US') + ' กม.');
-        ctx.font = '700 32px "Kanit", "Prompt"';
+        ctx.font = '700 32px "Prompt", "Kanit"';
         const tw = ctx.measureText(txt).width + 48;
         drawRoundRect(ctx, 540 - tw / 2, 466, tw, 54, 27);
         ctx.fillStyle = 'rgba(15, 23, 42, 0.88)'; ctx.fill();
@@ -291,10 +291,10 @@ export function getWonlokStyleScript() {
           ctx.fillStyle = isSketch ? '#ffffff' : 'rgba(15, 23, 42, 0.94)'; ctx.fill();
           ctx.strokeStyle = isSketch ? '#0f172a' : (card.color || '#38bdf8'); ctx.lineWidth = 4; ctx.stroke();
           ctx.fillStyle = isSketch ? '#334155' : '#cbd5e1';
-          ctx.font = '600 32px "Kanit", "Noto Sans Thai"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.font = '600 32px "Prompt", "Kanit", "Noto Sans Thai"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText(card.title, x + cardW / 2, cardY + 62);
           ctx.fillStyle = isSketch ? '#0f172a' : (card.color || '#ffd166');
-          ctx.font = '800 50px "Kanit", "Prompt"';
+          ctx.font = '800 50px "Prompt", "Kanit"';
           ctx.fillText(card.value, x + cardW / 2, cardY + 146);
           ctx.restore();
         });

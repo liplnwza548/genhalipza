@@ -86,7 +86,7 @@ export function getMascotStyleScript() {
       // Header Title / Beat Banner
       const cardTitle = scene.params?.cardTitle || scene.headline || 'ประเด็นสำคัญ';
       ctx.fillStyle = isSketch ? '#0f172a' : (isDark ? '#f8fafc' : '#181B26');
-      ctx.font = '800 38px "Kanit", "Prompt"';
+      ctx.font = '800 38px "Prompt", "Kanit"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(cardTitle, fx + fw / 2 + 24, fy + headerH / 2 + 2);
@@ -127,18 +127,18 @@ export function getMascotStyleScript() {
           drawRoundRect(ctx, -145, -bh / 2 + 34, 290, 56, 28);
           ctx.fillStyle = cardBorder; ctx.fill();
           ctx.fillStyle = '#ffffff';
-          ctx.font = '800 32px "Kanit", "Prompt"';
+          ctx.font = '800 32px "Prompt", "Kanit"';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText(item.label, 0, -bh / 2 + 63);
 
           // Big Hero Metric
           ctx.fillStyle = valCol;
-          ctx.font = '800 92px "Kanit", "Prompt"';
+          ctx.font = '800 92px "Prompt", "Kanit"';
           ctx.fillText(item.value, 0, 16);
 
           // Note pill
           ctx.fillStyle = '#1e293b';
-          ctx.font = '700 32px "Kanit", "Noto Sans Thai"';
+          ctx.font = '700 32px "Prompt", "Kanit", "Noto Sans Thai"';
           ctx.fillText(item.note || '', 0, bh / 2 - 70);
           ctx.restore();
         });
@@ -173,13 +173,13 @@ export function getMascotStyleScript() {
           ctx.beginPath(); ctx.arc(ix + 58, iy + ih / 2, 30, 0, Math.PI * 2); ctx.fill();
           ctx.strokeStyle = '#181B26'; ctx.lineWidth = 3; ctx.stroke();
           ctx.fillStyle = '#ffffff';
-          ctx.font = '800 32px "Kanit", "Prompt"';
+          ctx.font = '800 32px "Prompt", "Kanit"';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText(String(idx + 1), ix + 58, iy + ih / 2 + 2);
 
           // Bullet text
           ctx.fillStyle = isSketch ? '#0f172a' : (isDark ? '#f8fafc' : '#181B26');
-          ctx.font = '700 38px "Kanit", "Noto Sans Thai"';
+          ctx.font = '700 38px "Prompt", "Kanit", "Noto Sans Thai"';
           ctx.textAlign = 'left';
           ctx.fillText(b, ix + 110, iy + ih / 2 + 2);
           ctx.restore();
@@ -212,7 +212,7 @@ export function getMascotStyleScript() {
 
       if (isSketch) {
         ctx.fillStyle = '#334155';
-        ctx.font = '700 24px "Kanit", "Prompt"';
+        ctx.font = '700 24px "Prompt", "Kanit"';
         ctx.textAlign = 'left';
         ctx.fillText('[MASCOT ZONE: pose=' + (scene.params?.pose || 'explain') + ', viseme=' + visemeCode + ']', 90, 1360);
       }
